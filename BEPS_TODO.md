@@ -1,12 +1,13 @@
 # Object Changes:
-Endpoint:
+Endpoint: -DONE
 - Add Threshold field
 - Add IPC_Hold_queue pointer
 
 
-Add node_state queues:
+Add node_state queues: - DONE
 - IPCHoldReleaseHeadHead
 - IPCHoldReleaseNextHead
+-Need boot initialisation???
 
 Add required_budget field to SC's
 
