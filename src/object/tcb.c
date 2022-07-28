@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
+#define CONFIG_KERNEL_MCS 1
+
 #include <config.h>
 #include <types.h>
 #include <api/failures.h>
@@ -281,6 +283,8 @@ void tcbReleaseRemove(tcb_t *tcb)
 void tcbReleaseEnqueue(tcb_t *tcb)
 {
     assert(thread_state_get_tcbInReleaseQueue(tcb->tcbState) == false);
+    assert(thread_state_get_tcbInHoldReleaseHeadQueue(tcb->tcbState) == false);
+    assert(thread_state_get_tcbInHoldReleaseNextQueue(tcb->tcbState) == false);
     assert(thread_state_get_tcbQueued(tcb->tcbState) == false);
 
     tcb_t *before = NULL;
@@ -334,6 +338,96 @@ tcb_t *tcbReleaseDequeue(void)
 
     return detached_head;
 }
+
+
+void tcbHoldReleaseHeadRemove(tcb_t *tcb) {
+    if (likely(thread_state_get_tcbInHoldReleaseHeadQueue(tcb->tcbState))) {
+        if (tcb->tcbSchedPrev) {
+            tcb->tcbSchedPrev->tcbSchedNext = tcb->tcbSchedNext;
+        } else {
+            NODE_STATE_ON_CORE(ksHoldReleaseHeadHead, tcb->tcbAffinity) = tcb->tcbSchedNext;
+            /* the head has changed, we might need to set a new timeout */
+            NODE_STATE_ON_CORE(ksReprogram, tcb->tcbAffinity) = true;
+        }
+
+        if (tcb->tcbSchedNext) {
+            tcb->tcbSchedNext->tcbSchedPrev = tcb->tcbSchedPrev;
+        }
+
+        tcb->tcbSchedNext = NULL;
+        tcb->tcbSchedPrev = NULL;
+        thread_state_ptr_set_tcbInHoldReleaseHeadQueue(&tcb->tcbState, false);
+    }
+}
+
+
+void tcbHoldReleaseHeadEnqueue(tcb_t *tcb) {
+    assert(thread_state_get_tcbInReleaseQueue(tcb->tcbState) == false);
+    assert(thread_state_get_tcbInHoldReleaseHeadQueue(tcb->tcbState) == false);
+    assert(thread_state_get_tcbInHoldReleaseNextQueue(tcb->tcbState) == false);
+    assert(thread_state_get_tcbQueued(tcb->tcbState) == false);
+
+    tcb_t *before = NULL;
+    tcb_t *after = NODE_STATE_ON_CORE(ksHoldReleaseHeadHead, tcb->tcbAffinity);
+
+    /* find our place in the ordered queue */
+    while (after != NULL &&
+           refill_head(tcb->tcbSchedContext)->rTime >= refill_head(after->tcbSchedContext)->rTime) {
+        before = after;
+        after = after->tcbSchedNext;
+    }
+
+    if (before == NULL) {
+        /* insert at head */
+        NODE_STATE_ON_CORE(ksHoldReleaseHeadHead, tcb->tcbAffinity) = tcb;
+        NODE_STATE_ON_CORE(ksReprogram, tcb->tcbAffinity) = true;
+    } else {
+        before->tcbSchedNext = tcb;
+    }
+
+    if (after != NULL) {
+        after->tcbSchedPrev = tcb;
+    }
+
+    tcb->tcbSchedNext = after;
+    tcb->tcbSchedPrev = before;
+
+    thread_state_ptr_set_tcbInReleaseQueue(&tcb->tcbState, true);
+}
+
+// tcb_t *tcbHoldReleaseHeadDequeue(void) {
+
+// }
+
+
+void tcbHoldReleaseNextRemove(tcb_t *tcb) {
+    if (likely(thread_state_get_tcbInHoldReleaseNextQueue(tcb->tcbState))) {
+        if (tcb->tcbSchedPrev) {
+            tcb->tcbSchedPrev->tcbSchedNext = tcb->tcbSchedNext;
+        } else {
+            NODE_STATE_ON_CORE(ksHoldReleaseNextHead, tcb->tcbAffinity) = tcb->tcbSchedNext;
+            /* the head has changed, we might need to set a new timeout */
+            NODE_STATE_ON_CORE(ksReprogram, tcb->tcbAffinity) = true;
+        }
+
+        if (tcb->tcbSchedNext) {
+            tcb->tcbSchedNext->tcbSchedPrev = tcb->tcbSchedPrev;
+        }
+
+        tcb->tcbSchedNext = NULL;
+        tcb->tcbSchedPrev = NULL;
+        thread_state_ptr_set_tcbInHoldReleaseNextQueue(&tcb->tcbState, false);
+    }
+}
+
+
+// void tcbHoldReleaseNextEnqueue(tcb_t *tcb) {
+
+// }
+// tcb_t *tcbHoldReleaseNextDequeue(void) {
+
+// }
+
 #endif
 
 cptr_t PURE getExtraCPtr(word_t *bufferPtr, word_t i)

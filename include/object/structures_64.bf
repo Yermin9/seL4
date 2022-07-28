@@ -431,7 +431,8 @@ block thread_state(blockingIPCBadge, blockingIPCCanGrant,
                    blockingIPCCanGrantReply, blockingIPCIsCall,
 #ifdef CONFIG_KERNEL_MCS
                    tcbQueued, tsType,
-                   tcbInReleaseQueue, blockingObject, replyObject) {
+                   tcbInReleaseQueue, tcbInHoldReleaseHeadQueue, tcbInHoldReleaseNextQueue,
+                   blockingObject, replyObject) {
 #else
                    tcbQueued, blockingObject,
                    tsType) {
@@ -440,10 +441,10 @@ block thread_state(blockingIPCBadge, blockingIPCCanGrant,
 
 #ifdef CONFIG_KERNEL_MCS
 #if BF_CANONICAL_RANGE == 48
-    padding 15
+    padding 13
     field_high replyObject 44
 #elif BF_CANONICAL_RANGE == 39
-    padding 24
+    padding 22
     field_high replyObject 35
 #else
 #error "Unspecified canonical address range"
@@ -457,6 +458,8 @@ block thread_state(blockingIPCBadge, blockingIPCCanGrant,
     field tcbQueued 1
 #ifdef CONFIG_KERNEL_MCS
     field tcbInReleaseQueue 1
+    field tcbInHoldReleaseHeadQueue 1
+    field tcbInHoldReleaseNextQueue 1
 #endif
 
 #if BF_CANONICAL_RANGE == 48
