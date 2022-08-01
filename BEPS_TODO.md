@@ -12,6 +12,8 @@ Add node_state queues: - Done
 
 Add to thread_state: tcbInHoldReleaseHeadQueue tcbInHoldReleaseNextQueue - DONE
 
+Add pointer to TCB to endpoint being waited on. - DONE "*holdEp"
+
 Add explicit thread_state "BlockedOn_IPC_Hold" - DONE
 
 - Make sure is initialised to 0 properly - PROBABLY DONE
@@ -19,15 +21,19 @@ Add explicit thread_state "BlockedOn_IPC_Hold" - DONE
 
 Change setNextInterrupt() - DONE
 
-Change awaken() - IN PROGRESS
+Add threshold field to SC's - DONE
 
-Add required_budget field to SC's
 
-Change fastpath up
+
+Change fastpath up - IN Progress
+
+
 Change slowpath:
 - Check if threshold set
 - Reject on incorrect syscalls
 - Check budget against threshold
+
+Change awaken() - IN PROGRESS - WAITING TILL I FINISH THE ABOVE
 
 
 Adjust configuration syscalls:

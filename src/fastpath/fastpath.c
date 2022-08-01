@@ -153,6 +153,11 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
     if (unlikely(dest->tcbSchedContext != NULL)) {
         slowpath(SysCall);
     }
+    
+    /* Check if an IPC threshold is set */
+    if (unlikely(endpoint_ptr_get_epThreshold(ep_ptr)!=0)) {
+        // TODO
+    }
 
     reply_t *reply = thread_state_get_replyObject_np(dest->tcbState);
     if (unlikely(reply == NULL)) {

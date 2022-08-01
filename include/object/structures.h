@@ -304,6 +304,9 @@ struct tcb {
 #ifdef CONFIG_KERNEL_MCS
     /* if tcb is in a call, pointer to the reply object, 1 word */
     reply_t *tcbReply;
+
+    /* if tcb is in IPC_Hold state, pointer to the endpoint */
+    endpoint_t *holdEp;
 #endif
 #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
     /* 16 bytes (12 bytes aarch32) */
@@ -377,6 +380,10 @@ struct sched_context {
     /* Whether to apply constant-bandwidth/sliding-window constraint
      * rather than only sporadic server constraints */
     bool_t scSporadic;
+
+    /* Threshold that this SC must exceed, only set when associated TCB 
+     * is held on an endpoint*/
+    ticks_t threshold;
 };
 
 struct reply {

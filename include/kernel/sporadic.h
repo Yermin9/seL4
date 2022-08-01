@@ -141,6 +141,13 @@ static inline bool_t refill_ready(sched_context_t *sc)
     return refill_head(sc)->rTime <= (NODE_STATE_ON_CORE(ksCurTime, sc->scCore) + getKernelWcetTicks());
 }
 
+/* Return true if the second refill is ready to be used. 
+ * Primarly for the ksHoldReleaseNextHead waiting queue */
+static inline bool_t refill_second_ready(sched_context_t *sc)
+{
+    return refill_second(sc)->rTime <= (NODE_STATE_ON_CORE(ksCurTime, sc->scCore) + getKernelWcetTicks());
+}
+
 /*
  * Return true if an SC has been successfully configured with parameters
  * that allow for a thread to run.
@@ -213,3 +220,10 @@ void refill_budget_check(ticks_t used);
  */
 void refill_unblock_check(sched_context_t *sc);
 
+
+/* Primarly used for the IPC_Hold queues
+ * Merges the first and second refills together
+ * Should only be called on a blocked thread, and the second refill should be released
+ * Returns True if the new merged head refill exceeds the threshold_field of the SC */
+
+bool_t budget_sufficient_merge(sched_context_t *sc);

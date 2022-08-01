@@ -337,3 +337,25 @@ void refill_unblock_check(sched_context_t *sc)
     }
     REFILL_SANITY_END(sc);
 }
+
+
+bool_t budget_sufficient_merge(sched_context_t *sc) {
+    /* SC should have at least two refills */
+    assert(!refill_single(sc));
+    /* This function should only be called when both head and second refill are released */
+    assert(refill_ready(sc));
+    assert(refill_second_ready(sc));
+
+    /* This behaviour should only be triggered if the threshold is non-zero */
+    assert(sc->threshold!=0);
+
+
+    /* Sum the head and second and merge */
+    /* We don't need to change the new head's release time, as it will be changed when the thread is actually run */
+    /* So there is no point changing it now. */
+    refill_t old_head = refill_pop_head(sc);
+    refill_head(sc)->rAmount += old_head.rAmount;
+
+    return refill_sufficient(sc, sc->threshold);
+}
+
