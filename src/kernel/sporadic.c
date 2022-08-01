@@ -31,11 +31,7 @@
  * the fpu or implementing divide.
  */
 
-/* return the index of the next item in the refill queue */
-static inline word_t refill_next(sched_context_t *sc, word_t index)
-{
-    return (index == sc->scRefillMax - 1u) ? (0) : index + 1u;
-}
+
 
 #ifdef CONFIG_PRINTING
 /* for debugging */

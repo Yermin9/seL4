@@ -5,20 +5,23 @@ Endpoint: -DONE
 
 
 Add node_state queues: - Done
-- IPCHoldReleaseHeadHead
-- IPCHoldReleaseNextHead
+- ksHoldReleaseHeadHead
+- ksHoldReleaseNextHead
 -Need boot initialisation - Done (in boot.c)
--Need addqueue and dequeue function - INPROGRESS
+-Need addqueue and dequeue function - Done
 
-Add to thread_state: tcbInHoldReleaseHeadQueue, tcbInHoldReleaseNextQueue
-- Make sure is initialised to 0 properly
+Add to thread_state: tcbInHoldReleaseHeadQueue tcbInHoldReleaseNextQueue - DONE
+
+Add explicit thread_state "BlockedOn_IPC_Hold" - DONE
+
+- Make sure is initialised to 0 properly - PROBABLY DONE
     - Seems memory is pre-zeroed?
 
+Change setNextInterrupt() - DONE
+
+Change awaken() - IN PROGRESS
 
 Add required_budget field to SC's
-
-Change setNextInterrupt()
-Change awaken()
 
 Change fastpath up
 Change slowpath:

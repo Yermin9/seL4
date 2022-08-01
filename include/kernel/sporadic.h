@@ -53,6 +53,13 @@ static inline refill_t *refill_index(sched_context_t *sc, word_t index)
 {
     return ((refill_t *)(SC_REF(sc) + sizeof(sched_context_t))) + index;
 }
+
+/* return the index of the next item in the refill queue */
+static inline word_t refill_next(sched_context_t *sc, word_t index)
+{
+    return (index == sc->scRefillMax - 1u) ? (0) : index + 1u;
+}
+
 static inline refill_t *refill_head(sched_context_t *sc)
 {
     return refill_index(sc, sc->scRefillHead);
@@ -60,6 +67,12 @@ static inline refill_t *refill_head(sched_context_t *sc)
 static inline refill_t *refill_tail(sched_context_t *sc)
 {
     return refill_index(sc, sc->scRefillTail);
+}
+
+/* Gets the next refill after the head. */
+static inline refill_t *refill_second(sched_context_t *sc)
+{
+    return refill_index(sc, refill_next(sc, sc->scRefillHead));
 }
 
 

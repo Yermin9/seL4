@@ -584,6 +584,12 @@ void setNextInterrupt(void)
     if (NODE_STATE(ksReleaseHead) != NULL) {
         next_interrupt = MIN(refill_head(NODE_STATE(ksReleaseHead)->tcbSchedContext)->rTime, next_interrupt);
     }
+    if (NODE_STATE(ksHoldReleaseHeadHead) != NULL) {
+        next_interrupt = MIN(refill_head(NODE_STATE(ksHoldReleaseHeadHead)->tcbSchedContext)->rTime, next_interrupt);
+    }
+    if (NODE_STATE(ksHoldReleaseNextHead) != NULL) {
+        next_interrupt = MIN(refill_second(NODE_STATE(ksHoldReleaseNextHead)->tcbSchedContext)->rTime, next_interrupt);
+    }
 
     setDeadline(next_interrupt - getTimerPrecision());
 }
@@ -673,6 +679,7 @@ void rescheduleRequired(void)
 }
 
 #ifdef CONFIG_KERNEL_MCS
+// IN PROGRESS
 void awaken(void)
 {
     while (unlikely(NODE_STATE(ksReleaseHead) != NULL && refill_ready(NODE_STATE(ksReleaseHead)->tcbSchedContext))) {
@@ -689,5 +696,38 @@ void awaken(void)
         /* changed head of release queue -> need to reprogram */
         NODE_STATE(ksReprogram) = true;
     }
+
+
+    /* Loop for ksHoldReleaseNextHead TODO */
+    while (unlikely(NODE_STATE(ksHoldReleaseNextHead) != NULL && refill_ready(NODE_STATE(ksHoldReleaseNextHead)->tcbSchedContext))) {
+        /* Remove the TCB */
+
+        /* Sum total budget */
+
+        /* If sufficient, move out of queue and complete IPC */
+
+        /* Otherwise, merge into head refill */
+
+        /* If there are other pending refills, re-insert into this queue, ordered correctly */
+        /* Otherwise, just leave, thread is "stuck", but that's OK */
+    }
+
+
+    /* Loop for ksHoldReleaseHeadHead TODO */
+    while (unlikely(NODE_STATE(ksHoldReleaseHeadHead) != NULL && refill_ready(NODE_STATE(ksHoldReleaseHeadHead)->tcbSchedContext))) {
+       /* Remove the TCB */
+
+        /* Check if its exceeded its threshold */
+
+        /* If yes, complete the IPC operation */
+
+        /* If no, add to ksHoldReleaseNextHead */
+        
+    }
+
+    
+
+
+
 }
 #endif
