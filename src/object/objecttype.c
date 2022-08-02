@@ -669,11 +669,33 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
         }
 
 #ifdef CONFIG_KERNEL_MCS
-        // TODO
+        
         /* Check if a threshold exists on the endpoint */
         endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(cap))
         if (unlikely(endpoint_ptr_get_epThreshold(ep_ptr)!=0)) {
-            if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + threshold)))
+            if (unlikely(!canDonate)) {
+                /* Only invocations that can donate are permitted to use a thresholded endpoint*/
+                current_syscall_error.type = seL4_IllegalOperation;
+                return EXCEPTION_SYSCALL_ERROR;
+            }
+
+            /* Check available budget against threshold*/
+            if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + endpoint_ptr_get_epThreshold(ep_ptr))) {
+                /* If we can't block, send fails silently, we don't enter IPC_Hold state. */
+                if (!block) {
+                    return EXCEPTION_NONE
+                }
+
+                // TODO
+                // Charge thread for usage
+                // Enqueue onto relevant IPC_Hold queue
+                // Set reschedule required.
+                
+
+            }
+
+
+
         }
 #endif
 

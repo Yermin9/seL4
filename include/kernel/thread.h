@@ -307,5 +307,9 @@ void awaken(void);
 /* Place the thread bound to this scheduling context in the release queue
  * of periodic threads waiting for budget recharge */
 void postpone(sched_context_t *sc);
+
+
+/* TODO */
+void ipcHold(tcb_t *tcb, endpoint_t * ep_ptr)
 #endif
 

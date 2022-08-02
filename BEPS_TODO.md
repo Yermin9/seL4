@@ -29,9 +29,11 @@ Change fastpath up - Done
 
 
 Change slowpath:
-- Check if threshold set
-- Reject on incorrect syscalls
-- Check budget against threshold
+- Check if threshold set - Done
+- Reject on incorrect syscalls -> Returns seL4_IllegalOperation
+- Check budget against threshold - Done
+- Reject appropriately ipcHold.
+    * Objecttype.c  (decodeInvocation)
 
 Change awaken() - IN PROGRESS - WAITING TILL I FINISH THE ABOVE
 
