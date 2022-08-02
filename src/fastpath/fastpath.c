@@ -154,9 +154,16 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
         slowpath(SysCall);
     }
     
-    /* Check if an IPC threshold is set */
-    if (unlikely(endpoint_ptr_get_epThreshold(ep_ptr)!=0)) {
-        // TODO
+    /* Check if the endpoint has a threshold on it */
+    time_t threshold = endpoint_ptr_get_epThreshold(ep_ptr);
+    if (unlikely(threshold!=0)) {
+        /* Compare the SC's budget to the threshold */
+        /* Comparison value is current thread's usage + threshold */
+        updateTimestamp();
+        if (unlikely(!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + threshold))) {
+            slowpath(SysCall);
+        }
+
     }
 
     reply_t *reply = thread_state_get_replyObject_np(dest->tcbState);

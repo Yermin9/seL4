@@ -227,3 +227,10 @@ void refill_unblock_check(sched_context_t *sc);
  * Returns True if the new merged head refill exceeds the threshold_field of the SC */
 
 bool_t budget_sufficient_merge(sched_context_t *sc);
+
+/* Checks if the SC has enough released budget (possibly across multiple refills)
+ * to exceed threshold 
+ * It can be called during the fastpath, where we don't charge usage.
+ * So NODE_STATE(KsCurTime) might not have been updated, so it takes the current time as an explicit paramter */
+
+bool_t available_budget_check(sched_context_t *sc, ticks_t threshold);

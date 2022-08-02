@@ -25,7 +25,7 @@ Add threshold field to SC's - DONE
 
 
 
-Change fastpath up - IN Progress
+Change fastpath up - Done
 
 
 Change slowpath:
@@ -34,6 +34,8 @@ Change slowpath:
 - Check budget against threshold
 
 Change awaken() - IN PROGRESS - WAITING TILL I FINISH THE ABOVE
+
+Change scheduler
 
 
 Adjust configuration syscalls:

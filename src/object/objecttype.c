@@ -668,10 +668,19 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
             return EXCEPTION_SYSCALL_ERROR;
         }
 
+#ifdef CONFIG_KERNEL_MCS
+        // TODO
+        /* Check if a threshold exists on the endpoint */
+        endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(cap))
+        if (unlikely(endpoint_ptr_get_epThreshold(ep_ptr)!=0)) {
+            if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + threshold)))
+        }
+#endif
+
         setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
 #ifdef CONFIG_KERNEL_MCS
         return performInvocation_Endpoint(
-                   EP_PTR(cap_endpoint_cap_get_capEPPtr(cap)),
+                   ep_ptr,
                    cap_endpoint_cap_get_capEPBadge(cap),
                    cap_endpoint_cap_get_capCanGrant(cap),
                    cap_endpoint_cap_get_capCanGrantReply(cap), block, call, canDonate);

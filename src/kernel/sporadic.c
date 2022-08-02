@@ -359,3 +359,17 @@ bool_t budget_sufficient_merge(sched_context_t *sc) {
     return refill_sufficient(sc, sc->threshold);
 }
 
+
+
+bool_t available_budget_check(sched_context_t *sc, ticks_t threshold) {
+    word_t cur_refill_index = sc->scRefillHead + 1;
+    ticks_t available_budget = refill_head(sc)->rAmount;
+    ticks_t required_budget = threshold + 2*getKernelWcetTicks()
+
+    while (unlikely((available_budget < required_budget) && refill_index(cur_refill_index)->rTime <=NODE_STATE(ksCurTime) && cur_refill!= sc->scRefillTail)) {
+        available_budget += refill_index(cur_refill_index)->rAmount;
+        cur_refill_index = cur_refill_index + 1;
+    }
+
+    return (available_budget >= required_budget);
+}
