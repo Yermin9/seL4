@@ -697,7 +697,7 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
                 commitTime();
 
                 // Enqueue onto relevant IPC_Hold queue
-
+                
                 // Enqueue onto endpoint hold queue
 
 
