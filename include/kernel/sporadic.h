@@ -230,7 +230,7 @@ bool_t budget_sufficient_merge(sched_context_t *sc);
 
 /* Checks if the SC has enough released budget (possibly across multiple refills)
  * to exceed threshold 
- * It can be called during the fastpath, where we don't charge usage.
- * So NODE_STATE(KsCurTime) might not have been updated, so it takes the current time as an explicit paramter */
+ * TODO, add a 'merge' flag to indicate that if the budget is insufficient, refills should be merged together
+ *  */
 
 bool_t available_budget_check(sched_context_t *sc, ticks_t threshold);

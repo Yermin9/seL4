@@ -679,7 +679,7 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
                 return EXCEPTION_SYSCALL_ERROR;
             }
 
-            /* Check available budget against threshold*/
+            /* Check available budget against threshold */
             if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + endpoint_ptr_get_epThreshold(ep_ptr))) {
                 /* If we can't block, send fails silently, we don't enter IPC_Hold state. */
                 if (!block) {
@@ -688,10 +688,23 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
 
                 // TODO
                 // Charge thread for usage
-                // Enqueue onto relevant IPC_Hold queue
-                // Set reschedule required.
-                
+                // Handle roundrobin specially??
+                /* We charge usage here, because the IPC_Hold queues assume threads have all available budget merged into head refill   */
+                /* Call refill_unblock_check to merge all released replenishments into the head */
+                refill_unblock_check(NODE_STATE(ksCurThread)->tcbSchedContext);
+                /* Then, charge usage via commitTime()??? */
+                /* Possibly can leave this call to happen at the end of schedule() instead... */
+                commitTime();
 
+                // Enqueue onto relevant IPC_Hold queue
+
+                // Enqueue onto endpoint hold queue
+
+
+                /* Set reschedule required */
+                NODE_STATE(ksSchedulerAction) = SchedulerAction_ChooseNewThread;
+                
+                return EXCEPTION_NONE;
             }
 
 

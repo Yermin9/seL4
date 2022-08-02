@@ -506,4 +506,9 @@ void reorderEP(endpoint_t *epptr, tcb_t *thread)
     queue = tcbEPAppend(thread, queue);
     ep_ptr_set_queue(epptr, queue);
 }
+
+void addholdEP(endpoint_t *epptr, tcb_t *thread) {
+
+}
+
 #endif

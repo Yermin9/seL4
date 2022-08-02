@@ -35,6 +35,8 @@ Change slowpath:
 - Reject appropriately ipcHold.
     * Objecttype.c  (decodeInvocation)
 
+Create endpoint.c function to addholdEP, removeholdEP, completeholdEP
+
 Change awaken() - IN PROGRESS - WAITING TILL I FINISH THE ABOVE
 
 Change scheduler
@@ -47,3 +49,5 @@ Adjust configuration syscalls:
 
 
 TODO: Put a CONFIG_KERNEL_MCS 1 at the top of tcb.c
+
+TODO: Handle Round Robin threads
