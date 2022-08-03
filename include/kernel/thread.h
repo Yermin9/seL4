@@ -310,6 +310,6 @@ void postpone(sched_context_t *sc);
 
 
 /* TODO */
-void ipcHold(tcb_t *tcb, endpoint_t * ep_ptr)
+// void ipcHold(tcb_t *tcb, endpoint_t * ep_ptr)
 #endif
 

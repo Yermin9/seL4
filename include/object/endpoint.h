@@ -27,13 +27,13 @@ void receiveIPC(tcb_t *thread, cap_t cap, bool_t isBlocking, cap_t replyCPtr);
 void reorderEP(endpoint_t *epptr, tcb_t *thread);
 
 /* Associates a thread in the IPC_Hold state (insufficient budget) with the endpoint */
-void addholdEP(endpoint_t *epptr, tcb_t *thread);
+void addHoldEP(endpoint_t * epptr, tcb_t *thread);
 
-/* Aborts the Held IPC. */
-void removeholdEP(void);
+/* Removes from the Held IPC queue */
+void removeHoldEP(tcb_t *thread);
 
 /* Completes the Held IPC operation. To be called when the thread has sufficient budget */
-void completeholdEP(void);
+void completeHoldEP(tcb_t *thread);
 #else
 void sendIPC(bool_t blocking, bool_t do_call, word_t badge,
              bool_t canGrant, bool_t canGrantReply, tcb_t *thread,

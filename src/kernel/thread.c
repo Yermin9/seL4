@@ -699,51 +699,51 @@ void awaken(void)
 
 
     /* Loop for ksHoldReleaseNextHead TODO */
-    while (unlikely(NODE_STATE(ksHoldReleaseNextHead) != NULL && refill_second_ready(NODE_STATE(ksHoldReleaseNextHead)->tcbSchedContext))) {
-        /* All threads in this queue should have a ready head refill */
-        assert(refill_ready(NODE_STATE(ksHoldReleaseNextHead)->tcbSchedContext))
+    // while (unlikely(NODE_STATE(ksHoldReleaseNextHead) != NULL && refill_second_ready(NODE_STATE(ksHoldReleaseNextHead)->tcbSchedContext))) {
+    //     /* All threads in this queue should have a ready head refill */
+    //     assert(refill_ready(NODE_STATE(ksHoldReleaseNextHead)->tcbSchedContext));
 
-        /* Remove the TCB */
-        tcb_t *awakened = tcbReleaseNextDequeue();
+    //     /* Remove the TCB */
+    //     tcb_t *awakened = tcbNextReleaseNextDequeue();
 
-        /* Sum budget in */
-       if(budget_sufficient_merge(awakened->tcbSchedContext)) {
-            /* If sufficient, complete the IPC */
-            //  TODO DO_IPC
+    //     /* Sum budget in */
+    //    if(budget_sufficient_merge(awakened->tcbSchedContext)) {
+    //         /* If sufficient, complete the IPC */
+    //         //  TODO DO_IPC
 
-        } else {
-            /* If there are other pending refills, re-insert into this queue, ordered correctly */
-            /* Otherwise, just leave, thread is now "stuck", but that's the user's problem */
-            if (!refill_single(awakened->tcbSchedContext)) {
-                tcbReleaseNextEnqueue(awakened);
-            }
+    //     } else {
+    //         /* If there are other pending refills, re-insert into this queue, ordered correctly */
+    //         /* Otherwise, just leave, thread is now "stuck", but that's the user's problem */
+    //         if (!refill_single(awakened->tcbSchedContext)) {
+    //             tcbReleaseNextEnqueue(awakened);
+    //         }
 
-        }
-    }
+    //     }
+    // }
 
 
     /* Loop for ksHoldReleaseHeadHead TODO */
-    while (unlikely(NODE_STATE(ksHoldReleaseHeadHead) != NULL && refill_ready(NODE_STATE(ksHoldReleaseHeadHead)->tcbSchedContext))) {
-       /* Remove the TCB */
-        tcb_t *awakened = tcbReleaseNextDequeue();
+    // while (unlikely(NODE_STATE(ksHoldReleaseHeadHead) != NULL && refill_ready(NODE_STATE(ksHoldReleaseHeadHead)->tcbSchedContext))) {
+    //    /* Remove the TCB */
+    //     tcb_t *awakened = tcbHoldReleaseNextDequeue();
 
-        /* Check if its exceeded its threshold */
-        if (refill_sufficient(awakened->tcbSchedContext,awakened->tcbSchedContext->threshold)) {
-            /* If yes, complete the IPC operation */
-            /* TODO DO IPC */
-        } else {
-            /* If no, check if there is another pending refill, if so add to ksHoldReleaseNextHead */
-            /* Otherwise, just leave, thread is now "stuck", but that's the user's problem */
-            if (!refill_single(awakened->tcbSchedContext)) {
-                tcbReleaseNextEnqueue(awakened);
-            }
-        }
-
-        
+    //     /* Check if its exceeded its threshold */
+    //     if (refill_sufficient(awakened->tcbSchedContext,awakened->tcbSchedContext->threshold)) {
+    //         /* If yes, complete the IPC operation */
+    //         /* TODO DO IPC */
+    //     } else {
+    //         /* If no, check if there is another pending refill, if so add to ksHoldReleaseNextHead */
+    //         /* Otherwise, just leave, thread is now "stuck", but that's the user's problem */
+    //         if (!refill_single(awakened->tcbSchedContext)) {
+    //             tcbReleaseNextEnqueue(awakened);
+    //         }
+    //     }
 
         
+
         
-    }
+        
+    // }
 
     
 

@@ -4,6 +4,7 @@ Endpoint: -DONE
 - Add IPC_Hold_queue pointer
 
 
+
 Add node_state queues: - Done
 - ksHoldReleaseHeadHead
 - ksHoldReleaseNextHead
@@ -12,7 +13,8 @@ Add node_state queues: - Done
 
 Add to thread_state: tcbInHoldReleaseHeadQueue tcbInHoldReleaseNextQueue - DONE
 
-Add pointer to TCB to endpoint being waited on. - DONE "*holdEp"
+Add pointer to TCB to endpoint being waited on. - DONE "holdCap"
++ cptr holdCptr
 
 Add explicit thread_state "BlockedOn_IPC_Hold" - DONE
 
@@ -35,12 +37,13 @@ Change slowpath:
 - Reject appropriately ipcHold.
     * Objecttype.c  (decodeInvocation)
 
-Create endpoint.c function to addholdEP, removeholdEP, completeholdEP
+Create endpoint.c function to addholdEP, removeholdEP, completeholdEP - DONE
 
-Change awaken() - IN PROGRESS - WAITING TILL I FINISH THE ABOVE
+Change awaken() - IN PROGRESS
 
 Change scheduler
 
+completeHoldEp: Check that IPC is still valid before sending.
 
 Adjust configuration syscalls:
 - Create seL4\_Endpoint\_SetThreshold

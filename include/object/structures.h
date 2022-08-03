@@ -305,8 +305,11 @@ struct tcb {
     /* if tcb is in a call, pointer to the reply object, 1 word */
     reply_t *tcbReply;
 
-    /* if tcb is in IPC_Hold state, pointer to the endpoint */
-    endpoint_t *holdEp;
+    /* if tcb is in IPC_Hold state, the relevant endpoint */
+    endpoint_t *holdEP;
+
+    /* if tcb is in IPC_Hold state, the relevant cptr */
+    cptr_t holdCptr;
 #endif
 #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
     /* 16 bytes (12 bytes aarch32) */

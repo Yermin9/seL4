@@ -671,7 +671,7 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
 #ifdef CONFIG_KERNEL_MCS
         
         /* Check if a threshold exists on the endpoint */
-        endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(cap))
+        endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(cap));
         if (unlikely(endpoint_ptr_get_epThreshold(ep_ptr)!=0)) {
             if (unlikely(!canDonate)) {
                 /* Only invocations that can donate are permitted to use a thresholded endpoint*/
@@ -683,23 +683,41 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
             if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + endpoint_ptr_get_epThreshold(ep_ptr))) {
                 /* If we can't block, send fails silently, we don't enter IPC_Hold state. */
                 if (!block) {
-                    return EXCEPTION_NONE
+                    return EXCEPTION_NONE;
                 }
 
                 // TODO
                 // Charge thread for usage
                 // Handle roundrobin specially??
+
                 /* We charge usage here, because the IPC_Hold queues assume threads have all available budget merged into head refill   */
                 /* Call refill_unblock_check to merge all released replenishments into the head */
                 refill_unblock_check(NODE_STATE(ksCurThread)->tcbSchedContext);
+
+
                 /* Then, charge usage via commitTime()??? */
                 /* Possibly can leave this call to happen at the end of schedule() instead... */
                 commitTime();
 
-                // Enqueue onto relevant IPC_Hold queue
-                
-                // Enqueue onto endpoint hold queue
+                /* Save the Cptr */
+                NODE_STATE(ksCurThread)->holdCptr = capIndex;
 
+                // Enqueue onto relevant IPC_Hold queue
+                if (refill_ready(NODE_STATE(ksCurThread)->tcbSchedContext)) {
+                    /* Head refill is released */
+                    tcbHoldReleaseHeadEnqueue(NODE_STATE(ksCurThread));
+                } else {
+                    /* Head refill not released */
+                    tcbHoldReleaseNextEnqueue(NODE_STATE(ksCurThread));
+                }
+                
+                /* Set thread state */
+                setThreadState(NODE_STATE(ksCurThread), ThreadState_BlockedOn_IPC_Hold);
+
+                /* Enqueue onto endpoint hold queue */
+                addHoldEP(ep_ptr, NODE_STATE(ksCurThread));
+
+                
 
                 /* Set reschedule required */
                 NODE_STATE(ksSchedulerAction) = SchedulerAction_ChooseNewThread;

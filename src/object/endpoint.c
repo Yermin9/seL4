@@ -507,8 +507,68 @@ void reorderEP(endpoint_t *epptr, tcb_t *thread)
     ep_ptr_set_queue(epptr, queue);
 }
 
-void addholdEP(endpoint_t *epptr, tcb_t *thread) {
+void addHoldEP(endpoint_t * epptr, tcb_t *thread) {
+    /* TCB should not currently be in an endpoint queue */
+    assert(thread->tcbEPNext==NULL && thread->tcbEPPrev==NULL);
 
+    assert(thread->holdEP==NULL);
+
+    tcb_t * head = (tcb_t *)endpoint_ptr_get_epHoldQueue_head(epptr);
+
+
+    /* This queue has no specified order, so just insert new TCB at the head */
+
+    thread->tcbEPNext = head;
+    if (thread->tcbEPNext != NULL) {
+        thread->tcbEPNext->tcbEPPrev=thread;
+    }
+
+    thread->holdEP = epptr;
+
+    endpoint_ptr_set_epHoldQueue_head(epptr,(word_t)thread);
+}
+
+void removeHoldEP(tcb_t *thread) {
+    /* Just remove from queue */
+    assert(thread->holdEP!=NULL);
+
+    if (thread->tcbEPPrev==NULL) {
+        /* This TCB is head of queue */
+        endpoint_ptr_set_epHoldQueue_head(thread->holdEP,(word_t)thread->tcbEPNext);
+    } else {
+        if (thread->tcbEPNext==NULL) {
+            /* Tail of queue */
+            thread->tcbEPPrev->tcbEPNext=NULL;
+        } else {
+            thread->tcbEPNext->tcbEPPrev = thread->tcbEPPrev;
+            thread->tcbEPPrev->tcbEPNext = thread->tcbEPNext;
+        }
+    }
+
+    thread->tcbEPNext=NULL;
+    thread->tcbEPPrev=NULL;
+    thread->holdEP = NULL;
+}
+
+void completeHoldEP(tcb_t *thread) {
+    removeHoldEP(thread);
+
+    /* IPC Hold operations are blocking and must be calls. 
+     * They must be able to donate*/
+
+
+    /* This *should* never fail. The cap was valid when we originally enetered the IPC Hold state 
+     * and any change that made it invalid (revocation etc), should have removed the tcb from the IPC Hold state*/
+    lookupCapAndSlot_ret_t lu_ret = lookupCapAndSlot(thread, thread->holdCptr);
+
+/*     if (unlikely(lu_ret.status != EXCEPTION_NONE)) {
+    } */
+
+
+    sendIPC(true,true,cap_endpoint_cap_get_capEPBadge(lu_ret.cap),
+                   cap_endpoint_cap_get_capCanGrant(lu_ret.cap),
+                   cap_endpoint_cap_get_capCanGrantReply(lu_ret.cap),
+                   true,thread,EP_PTR(cap_endpoint_cap_get_capEPPtr(lu_ret.cap)));
 }
 
 #endif
