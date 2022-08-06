@@ -572,6 +572,11 @@ void postpone(sched_context_t *sc)
     NODE_STATE_ON_CORE(ksReprogram, sc->scCore) = true;
 }
 
+
+
+#define DEFERRED_RELEASE_COUNT 5
+
+
 void setNextInterrupt(void)
 {
     time_t next_interrupt = NODE_STATE(ksCurTime) +
@@ -582,8 +587,18 @@ void setNextInterrupt(void)
     }
 
     if (NODE_STATE(ksReleaseHead) != NULL) {
-        next_interrupt = MIN(refill_head(NODE_STATE(ksReleaseHead)->tcbSchedContext)->rTime, next_interrupt);
+        tcb_t * releaseTCB = NODE_STATE(ksReleaseHead);
+        word_t checkedCount = 0;
+
+        /* Search for the next release queue TCB with a higher priority than current thread */
+        /* But to prevent unbounded searching, we also stop after a certain fixed number 'DEFERRED_RELEASE_COUNT' */
+        while (releaseTCB->tcbPriority <= NODE_STATE(ksCurThread)->tcbPriority && releaseTCB->tcbSchedNext!= NULL && checkedCount < DEFERRED_RELEASE_COUNT) {
+            releaseTCB = releaseTCB->tcbSchedNext;
+            checkedCount = checkedCount + 1;
+        }
+        next_interrupt = MIN(refill_head(releaseTCB->tcbSchedContext)->rTime, next_interrupt);
     }
+
 
     setDeadline(next_interrupt - getTimerPrecision());
 }
