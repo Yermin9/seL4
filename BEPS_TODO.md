@@ -42,6 +42,7 @@ Create endpoint.c function to addholdEP, removeholdEP, completeholdEP - DONE
 Change awaken() - IN PROGRESS
 
 Change scheduler
+ - If a thread in the BlockedOn_IPC_Hold state is picker 
 
 completeHoldEp: Check that IPC is still valid before sending.
 
@@ -51,6 +52,12 @@ Adjust configuration syscalls:
 - All revocation or deletion operations
 
 
+TODO: Wrap everything in ifdef CONFIG_ENDPOINT_THRESHOLDS
+
 TODO: Put a CONFIG_KERNEL_MCS 1 at the top of tcb.c
 
 TODO: Handle Round Robin threads
+
+TODO: Remove #define CONFIG_ENDPOINT_THRESHOLDS 1
+ - objecttype.c
+ - thread.c

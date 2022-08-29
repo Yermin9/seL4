@@ -668,7 +668,8 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
             return EXCEPTION_SYSCALL_ERROR;
         }
 
-#ifdef CONFIG_KERNEL_MCS
+#define CONFIG_ENDPOINT_THRESHOLDS 1
+#ifdef CONFIG_ENDPOINT_THRESHOLDS
         
         /* Check if a threshold exists on the endpoint */
         endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(cap));
@@ -728,7 +729,7 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
 
 
         }
-#endif
+#endif /* CONFIG_ENDPOINT_THRESHOLDS */
 
         setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
 #ifdef CONFIG_KERNEL_MCS
