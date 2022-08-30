@@ -40,9 +40,11 @@ Change slowpath:
 Create endpoint.c function to addholdEP, removeholdEP, completeholdEP - DONE
 
 Change awaken() - IN PROGRESS
+ - Add debug check for stuck threads - TODO
 
-Change scheduler
+Change scheduler - DONE
  - If a thread in the BlockedOn_IPC_Hold state is picker 
+ - Change switchToThread
 
 completeHoldEp: Check that IPC is still valid before sending.
 

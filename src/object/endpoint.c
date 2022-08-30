@@ -553,16 +553,16 @@ void removeHoldEP(tcb_t *thread) {
 void completeHoldEP(tcb_t *thread) {
     removeHoldEP(thread);
 
-    /* IPC Hold operations are blocking and must be calls. 
-     * They must be able to donate*/
+    /* To reach an IPC Hold state, the original invocation must
+     * have been blocking, be seL4_Call and be able to donate
+     * Therefore we can assume all these properties when calling sendIPC*/
 
 
-    /* This *should* never fail. The cap was valid when we originally enetered the IPC Hold state 
+    /* This should never fail. The cap was valid when we originally entered the IPC Hold state 
      * and any change that made it invalid (revocation etc), should have removed the tcb from the IPC Hold state*/
     lookupCapAndSlot_ret_t lu_ret = lookupCapAndSlot(thread, thread->holdCptr);
 
-/*     if (unlikely(lu_ret.status != EXCEPTION_NONE)) {
-    } */
+    assert(lu_ret.status != EXCEPTION_NONE);
 
 
     sendIPC(true,true,cap_endpoint_cap_get_capEPBadge(lu_ret.cap),

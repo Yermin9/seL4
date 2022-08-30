@@ -355,7 +355,7 @@ void schedule(void)
     checkDomainTime();
 #endif
 
-    if (NODE_STATE(ksSchedulerAction) != SchedulerAction_ResumeCurrentThread) {
+    while(NODE_STATE(ksSchedulerAction) != SchedulerAction_ResumeCurrentThread) {
         bool_t was_runnable;
         if (isSchedulable(NODE_STATE(ksCurThread))) {
             was_runnable = true;
@@ -395,7 +395,6 @@ void schedule(void)
             }
         }
     }
-    NODE_STATE(ksSchedulerAction) = SchedulerAction_ResumeCurrentThread;
 #ifdef ENABLE_SMP_SUPPORT
     doMaskReschedule(ARCH_NODE_STATE(ipiReschedulePending));
     ARCH_NODE_STATE(ipiReschedulePending) = 0;
@@ -445,6 +444,17 @@ void switchToThread(tcb_t *thread)
     assert(!thread_state_get_tcbInReleaseQueue(thread->tcbState));
     assert(refill_sufficient(thread->tcbSchedContext, 0));
     assert(refill_ready(thread->tcbSchedContext));
+
+
+    /* It's possible that this thread is in the IPC_Hold State 
+     * Resume the IPC operation, then schedule again
+     */
+    if (thread_state_get_tsType(target->tcbState) == ThreadState_BlockedOn_IPC_Hold) {
+        /* Clear out the scheduler candidate, if there was one, so we can schedule loop again cleanly. */
+        NODE_STATE(ksSchedulerAction) = SchedulerAction_ChooseNewThread;
+        completeHoldEP(thread);
+        return;
+    }
 #endif
 
 #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
@@ -453,6 +463,7 @@ void switchToThread(tcb_t *thread)
     Arch_switchToThread(thread);
     tcbSchedDequeue(thread);
     NODE_STATE(ksCurThread) = thread;
+    NODE_STATE(ksSchedulerAction) = SchedulerAction_ResumeCurrentThread;
 }
 
 void switchToIdleThread(void)
@@ -712,7 +723,7 @@ void awaken(void)
 
         /* Sum budget in */
        if(budget_sufficient_merge(awakened->tcbSchedContext)) {
-            /* If sufficient, complete the IPC */
+            /* If yes, insert into scheduler to later complete the IPC operation */
             //  TODO DO_IPC
 
         } else {
@@ -721,6 +732,13 @@ void awaken(void)
             if (!refill_single(awakened->tcbSchedContext)) {
                 tcbReleaseNextEnqueue(awakened);
             }
+            #ifdef CONFIG_DEBUG_BUILD
+            /* In a debug build, warn user about stuck thread */
+            
+            else {
+                // TODO
+            }
+            #endif
 
         }
     }
@@ -733,7 +751,7 @@ void awaken(void)
 
         /* Check if its exceeded its threshold */
         if (refill_sufficient(awakened->tcbSchedContext,awakened->tcbSchedContext->threshold)) {
-            /* If yes, complete the IPC operation */
+            /* If yes, insert into scheduler to later complete the IPC operation */
             /* TODO DO IPC */
         } else {
             /* If no, check if there is another pending refill, if so add to ksHoldReleaseNextHead */
@@ -741,6 +759,13 @@ void awaken(void)
             if (!refill_single(awakened->tcbSchedContext)) {
                 tcbReleaseNextEnqueue(awakened);
             }
+            #ifdef CONFIG_DEBUG_BUILD
+            /* In a debug build, warn user about stuck thread */
+            
+            else {
+                // TODO
+            }
+            #endif
         }
 
         
