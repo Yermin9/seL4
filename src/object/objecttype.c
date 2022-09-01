@@ -668,11 +668,11 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
             return EXCEPTION_SYSCALL_ERROR;
         }
 
-#define CONFIG_ENDPOINT_THRESHOLDS 1
-#ifdef CONFIG_ENDPOINT_THRESHOLDS
+        endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(cap));
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
         
         /* Check if a threshold exists on the endpoint */
-        endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(cap));
+        
         if (unlikely(endpoint_ptr_get_epThreshold(ep_ptr)!=0)) {
             if (unlikely(!canDonate)) {
                 /* Only invocations that can donate are permitted to use a thresholded endpoint*/
@@ -729,7 +729,7 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
 
 
         }
-#endif /* CONFIG_ENDPOINT_THRESHOLDS */
+#endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
 
         setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
 #ifdef CONFIG_KERNEL_MCS

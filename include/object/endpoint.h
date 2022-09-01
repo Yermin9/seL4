@@ -27,7 +27,7 @@ void receiveIPC(tcb_t *thread, cap_t cap, bool_t isBlocking, cap_t replyCPtr);
 void reorderEP(endpoint_t *epptr, tcb_t *thread);
 
 
-#ifdef CONFIG_ENDPOINT_THRESHOLDS
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
 /* Associates a thread in the IPC_Hold state (insufficient budget) with the endpoint */
 void addHoldEP(endpoint_t * epptr, tcb_t *thread);
 
@@ -37,7 +37,7 @@ void removeHoldEP(tcb_t *thread);
 /* Completes the Held IPC operation. To be called when the thread has sufficient budget */
 void completeHoldEP(tcb_t *thread);
 
-#endif /* CONFIG_ENDPOINT_THRESHOLDS */
+#endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
 
 #else
 void sendIPC(bool_t blocking, bool_t do_call, word_t badge,

@@ -355,7 +355,11 @@ void schedule(void)
     checkDomainTime();
 #endif
 
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
     while(NODE_STATE(ksSchedulerAction) != SchedulerAction_ResumeCurrentThread) {
+#else
+    if(NODE_STATE(ksSchedulerAction) != SchedulerAction_ResumeCurrentThread) {
+#endif
         bool_t was_runnable;
         if (isSchedulable(NODE_STATE(ksCurThread))) {
             was_runnable = true;
@@ -446,6 +450,8 @@ void switchToThread(tcb_t *thread)
     assert(refill_ready(thread->tcbSchedContext));
 
 
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+
     /* It's possible that this thread is in the IPC_Hold State 
      * Resume the IPC operation, then schedule again
      */
@@ -455,6 +461,9 @@ void switchToThread(tcb_t *thread)
         completeHoldEP(thread);
         return;
     }
+#endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
+
+
 #endif
 
 #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
@@ -595,12 +604,15 @@ void setNextInterrupt(void)
     if (NODE_STATE(ksReleaseHead) != NULL) {
         next_interrupt = MIN(refill_head(NODE_STATE(ksReleaseHead)->tcbSchedContext)->rTime, next_interrupt);
     }
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
     if (NODE_STATE(ksHoldReleaseHeadHead) != NULL) {
         next_interrupt = MIN(refill_head(NODE_STATE(ksHoldReleaseHeadHead)->tcbSchedContext)->rTime, next_interrupt);
     }
     if (NODE_STATE(ksHoldReleaseNextHead) != NULL) {
         next_interrupt = MIN(refill_second(NODE_STATE(ksHoldReleaseNextHead)->tcbSchedContext)->rTime, next_interrupt);
     }
+#endif
 
     setDeadline(next_interrupt - getTimerPrecision());
 }
@@ -708,10 +720,7 @@ void awaken(void)
         NODE_STATE(ksReprogram) = true;
     }
 
-    // TODO
-    #define CONFIG_ENDPOINT_THRESHOLDS 1
-
-    #ifdef CONFIG_ENDPOINT_THRESHOLDS
+    #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
 
     /* Loop for ksHoldReleaseNextHead TODO */
     while (unlikely(NODE_STATE(ksHoldReleaseNextHead) != NULL && refill_second_ready(NODE_STATE(ksHoldReleaseNextHead)->tcbSchedContext))) {
@@ -724,7 +733,7 @@ void awaken(void)
         /* Sum budget in */
        if(budget_sufficient_merge(awakened->tcbSchedContext)) {
             /* If yes, insert into scheduler to later complete the IPC operation */
-            //  TODO DO_IPC
+            possibleSwitchTo(awakened);
 
         } else {
             /* If there are other pending refills, re-insert into this queue, ordered correctly */
@@ -734,13 +743,14 @@ void awaken(void)
             }
             #ifdef CONFIG_DEBUG_BUILD
             /* In a debug build, warn user about stuck thread */
-            
             else {
-                // TODO
+                printf("Thread stuck on endpoint threshold due to insufficient budget %p \"%s\"\n", awakened, TCB_PTR_DEBUG_PTR(awakened)->tcbName);
             }
             #endif
 
         }
+        /* changed head of releaseNext queue -> need to reprogram */
+        NODE_STATE(ksReprogram) = true;
     }
 
 
@@ -752,7 +762,7 @@ void awaken(void)
         /* Check if its exceeded its threshold */
         if (refill_sufficient(awakened->tcbSchedContext,awakened->tcbSchedContext->threshold)) {
             /* If yes, insert into scheduler to later complete the IPC operation */
-            /* TODO DO IPC */
+            possibleSwitchTo(awakened);
         } else {
             /* If no, check if there is another pending refill, if so add to ksHoldReleaseNextHead */
             /* Otherwise, just leave, thread is now "stuck", but that's the user's problem */
@@ -761,16 +771,15 @@ void awaken(void)
             }
             #ifdef CONFIG_DEBUG_BUILD
             /* In a debug build, warn user about stuck thread */
-            
             else {
-                // TODO
+                printf("Thread stuck on endpoint threshold due to insufficient budget %p \"%s\"\n", awakened, TCB_PTR_DEBUG_PTR(awakened)->tcbName);
             }
             #endif
         }
 
         
-
-        
+        /* changed head of releaseHead queue -> need to reprogram */
+        NODE_STATE(ksReprogram) = true;
         
     }
 

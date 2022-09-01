@@ -168,7 +168,9 @@ enum _thread_state {
     ThreadState_BlockedOnSend,
     ThreadState_BlockedOnReply,
     ThreadState_BlockedOnNotification,
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
     ThreadState_BlockedOn_IPC_Hold,
+#endif
 #ifdef CONFIG_VTX
     ThreadState_RunningVM,
 #endif
@@ -384,9 +386,13 @@ struct sched_context {
      * rather than only sporadic server constraints */
     bool_t scSporadic;
 
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
     /* Threshold that this SC must exceed, only set when associated TCB 
      * is held on an endpoint*/
     ticks_t threshold;
+#endif 
+
 };
 
 struct reply {

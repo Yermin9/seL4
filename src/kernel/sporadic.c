@@ -338,6 +338,7 @@ void refill_unblock_check(sched_context_t *sc)
     REFILL_SANITY_END(sc);
 }
 
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
 
 bool_t budget_sufficient_merge(sched_context_t *sc) {
     /* SC should have at least two refills */
@@ -373,4 +374,6 @@ bool_t available_budget_check(sched_context_t *sc, ticks_t threshold) {
 
     return (available_budget >= required_budget);
 }
+
+#endif
 

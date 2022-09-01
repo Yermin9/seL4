@@ -221,6 +221,8 @@ void refill_budget_check(ticks_t used);
 void refill_unblock_check(sched_context_t *sc);
 
 
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
 /* Primarly used for the IPC_Hold queues
  * Merges the first and second refills together
  * Should only be called on a blocked thread, and the second refill should be released
@@ -234,3 +236,5 @@ bool_t budget_sufficient_merge(sched_context_t *sc);
  *  */
 
 bool_t available_budget_check(sched_context_t *sc, ticks_t threshold);
+
+#endif

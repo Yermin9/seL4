@@ -200,13 +200,16 @@ block sched_control_cap {
 
 ---- Arch-independent object types
 
--- Endpoint: size = 16 bytes (32 bytes on mcs)
+-- Endpoint: size = 16 bytes (32 bytes on mcs with endpoint thresholds)
 block endpoint {
     field epQueue_head 64
 #ifdef CONFIG_KERNEL_MCS
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
     field epHoldQueue_head 64
     field epThreshold 64
 #endif
+#endif
+
 
 #if BF_CANONICAL_RANGE == 48
     padding 16
@@ -431,7 +434,10 @@ block thread_state(blockingIPCBadge, blockingIPCCanGrant,
                    blockingIPCCanGrantReply, blockingIPCIsCall,
 #ifdef CONFIG_KERNEL_MCS
                    tcbQueued, tsType,
-                   tcbInReleaseQueue, tcbInHoldReleaseHeadQueue, tcbInHoldReleaseNextQueue,
+                   tcbInReleaseQueue, 
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS                
+                   tcbInHoldReleaseHeadQueue, tcbInHoldReleaseNextQueue,
+#endif
                    blockingObject, replyObject) {
 #else
                    tcbQueued, blockingObject,
@@ -458,8 +464,12 @@ block thread_state(blockingIPCBadge, blockingIPCCanGrant,
     field tcbQueued 1
 #ifdef CONFIG_KERNEL_MCS
     field tcbInReleaseQueue 1
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS        
     field tcbInHoldReleaseHeadQueue 1
     field tcbInHoldReleaseNextQueue 1
+#else
+    padding 2
+#endif    
 #endif
 
 #if BF_CANONICAL_RANGE == 48

@@ -281,8 +281,10 @@ void tcbReleaseRemove(tcb_t *tcb)
 void tcbReleaseEnqueue(tcb_t *tcb)
 {
     assert(thread_state_get_tcbInReleaseQueue(tcb->tcbState) == false);
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
     assert(thread_state_get_tcbInHoldReleaseHeadQueue(tcb->tcbState) == false);
     assert(thread_state_get_tcbInHoldReleaseNextQueue(tcb->tcbState) == false);
+#endif
     assert(thread_state_get_tcbQueued(tcb->tcbState) == false);
 
     tcb_t *before = NULL;
@@ -337,6 +339,9 @@ tcb_t *tcbReleaseDequeue(void)
     return detached_head;
 }
 
+
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
 
 void tcbHoldReleaseHeadRemove(tcb_t *tcb) {
     if (likely(thread_state_get_tcbInHoldReleaseHeadQueue(tcb->tcbState))) {
@@ -500,7 +505,12 @@ tcb_t *tcbHoldReleaseNextDequeue(void) {
     return detached_head;
 }
 
-#endif
+
+#endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
+
+
+
+#endif /* CONFIG_KERNEL_MCS */
 
 cptr_t PURE getExtraCPtr(word_t *bufferPtr, word_t i)
 {

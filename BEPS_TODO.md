@@ -44,22 +44,21 @@ Change awaken() - IN PROGRESS
 
 Change scheduler - DONE
  - If a thread in the BlockedOn_IPC_Hold state is picker 
- - Change switchToThread
+ - Change switchToThread - DONE
 
-completeHoldEp: Check that IPC is still valid before sending.
+completeHoldEp: Check that IPC is still valid before sending. -DONE
+    - Shouldn't matter - Anything that makes IPC invalidate will remove from hold state
 
 Adjust configuration syscalls:
 - Create seL4\_Endpoint\_SetThreshold
+    - Only allow original capability
 - Alteration of SC parameters
 - All revocation or deletion operations
 
 
 TODO: Wrap everything in ifdef CONFIG_ENDPOINT_THRESHOLDS
+ -- Actually use CONFIG_KERNEL_IPCTHRESHOLDS
 
 TODO: Put a CONFIG_KERNEL_MCS 1 at the top of tcb.c
 
 TODO: Handle Round Robin threads
-
-TODO: Remove #define CONFIG_ENDPOINT_THRESHOLDS 1
- - objecttype.c
- - thread.c

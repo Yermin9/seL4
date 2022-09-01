@@ -28,7 +28,17 @@
 #else
 #define seL4_TCBBits            11
 #endif
+
+#ifdef CONFIG_KERNEL_MCS
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
 #define seL4_EndpointBits       5
+#else
+#define seL4_EndpointBits       4
+#endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
+#else
+#define seL4_EndpointBits       4
+#endif /* CONFIG_KERNEL_MCS */
+
 #ifdef CONFIG_KERNEL_MCS
 #define seL4_NotificationBits   6
 #define seL4_ReplyBits          5

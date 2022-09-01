@@ -507,6 +507,9 @@ void reorderEP(endpoint_t *epptr, tcb_t *thread)
     ep_ptr_set_queue(epptr, queue);
 }
 
+ 
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+
 void addHoldEP(endpoint_t * epptr, tcb_t *thread) {
     /* TCB should not currently be in an endpoint queue */
     assert(thread->tcbEPNext==NULL && thread->tcbEPPrev==NULL);
@@ -571,4 +574,6 @@ void completeHoldEP(tcb_t *thread) {
                    true,thread,EP_PTR(cap_endpoint_cap_get_capEPPtr(lu_ret.cap)));
 }
 
-#endif
+#endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
+
+#endif /* CONFIG_KERNEL_MCS */

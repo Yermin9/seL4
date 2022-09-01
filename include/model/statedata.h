@@ -66,7 +66,7 @@ NODE_STATE_DECLARE(tcb_t, *ksSchedulerAction);
 #ifdef CONFIG_KERNEL_MCS
 NODE_STATE_DECLARE(tcb_t, *ksReleaseHead);
 
-#ifdef CONFIG_ENDPOINT_THRESHOLDS
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
 /* Two queues for tracking threads in the IPC_Hold state
 HeadHead is ordered by the associated SC's head refill
 NextHead is ordered by the associated SC's second refill(after the head)
