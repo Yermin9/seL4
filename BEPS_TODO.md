@@ -39,8 +39,8 @@ Change slowpath:
 
 Create endpoint.c function to addholdEP, removeholdEP, completeholdEP - DONE
 
-Change awaken() - IN PROGRESS
- - Add debug check for stuck threads - TODO
+Change awaken() - Done
+ - Add debug check for stuck threads 
 
 Change scheduler - DONE
  - If a thread in the BlockedOn_IPC_Hold state is picker 
@@ -50,8 +50,10 @@ completeHoldEp: Check that IPC is still valid before sending. -DONE
     - Shouldn't matter - Anything that makes IPC invalidate will remove from hold state
 
 Adjust configuration syscalls:
-- Create seL4\_Endpoint\_SetThreshold
+- Create seL4\_Endpoint\_SetThreshold 
     - Only allow original capability
+    - Changed how this is invoked. Must be invoked via Cnode style
+    - Still need to set manual reference
 - Alteration of SC parameters
 - All revocation or deletion operations
 

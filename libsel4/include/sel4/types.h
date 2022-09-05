@@ -40,7 +40,6 @@ typedef seL4_CPtr seL4_Untyped;
 typedef seL4_CPtr seL4_DomainSet;
 typedef seL4_CPtr seL4_SchedContext;
 typedef seL4_CPtr seL4_SchedControl;
-typedef seL4_CPtr seL4_Endpoint;
 
 typedef seL4_Uint64 seL4_Time;
 

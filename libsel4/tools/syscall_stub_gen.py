@@ -255,7 +255,6 @@ def init_data_types(wordsize):
         CapType("seL4_DomainSet", wordsize),
         CapType("seL4_SchedContext", wordsize),
         CapType("seL4_SchedControl", wordsize),
-        CapType("seL4_Endpoint", wordsize),
     ]
 
     return types
