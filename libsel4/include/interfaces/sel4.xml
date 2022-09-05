@@ -1191,7 +1191,7 @@
                 </description>
             </error>
         </method>
-        <method id="EndpointSetThreshold" name="SetThreshold" manual_name="Endpoint Set Threshold" manual_label="cnode__endpoint_setThreshold">
+        <method id="EndpointSetThreshold" name="Endpoint_SetThreshold" manual_name="Endpoint Set Threshold" manual_label="cnode__endpoint_setThreshold">
             <condition><and><config var="CONFIG_KERNEL_MCS"/><config var="CONFIG_KERNEL_IPCTHRESHOLDS"/></and></condition>
             <brief>
                 Sets the threshold value of an endpoint. Only valid on the original endpoint capability

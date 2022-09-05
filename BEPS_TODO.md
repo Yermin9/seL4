@@ -54,12 +54,14 @@ Adjust configuration syscalls:
     - Only allow original capability
     - Changed how this is invoked. Must be invoked via Cnode style
     - Still need to set manual reference
+    - Currently working in cnode.c
 - Alteration of SC parameters
 - All revocation or deletion operations
 
 
 TODO: Wrap everything in ifdef CONFIG_ENDPOINT_THRESHOLDS
  -- Actually use CONFIG_KERNEL_IPCTHRESHOLDS
+Config options is -DKernelIpcThresholds 
 
 TODO: Put a CONFIG_KERNEL_MCS 1 at the top of tcb.c
 

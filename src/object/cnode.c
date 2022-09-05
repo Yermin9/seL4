@@ -34,7 +34,11 @@ static void emptySlot(cte_t *slot, cap_t cleanupInfo);
 static exception_t reduceZombie(cte_t *slot, bool_t exposed);
 
 #ifdef CONFIG_KERNEL_MCS
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+#define CNODE_LAST_INVOCATION EndpointSetThreshold
+#else
 #define CNODE_LAST_INVOCATION CNodeRotate
+#endif
 #else
 #define CNODE_LAST_INVOCATION CNodeSaveCaller
 #endif
@@ -202,6 +206,8 @@ exception_t decodeCNodeInvocation(word_t invLabel, word_t length, cap_t cap,
         return invokeCNodeDelete(destSlot);
     }
 
+
+
 #ifndef CONFIG_KERNEL_MCS
     if (invLabel == CNodeSaveCaller) {
         status = ensureEmptySlot(destSlot);
@@ -212,6 +218,19 @@ exception_t decodeCNodeInvocation(word_t invLabel, word_t length, cap_t cap,
 
         setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
         return invokeCNodeSaveCaller(destSlot);
+    }
+#endif
+
+#if (defined(CONFIG_KERNEL_MCS) && defined(CONFIG_KERNEL_IPCTHRESHOLDS))
+    if (invLabel == EndpointSetThreshold) {
+        // lu_ret should be the target.
+        /* TODO */
+
+        cap_get_capType(cap)
+
+
+
+
     }
 #endif
 
