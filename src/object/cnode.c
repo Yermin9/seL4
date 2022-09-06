@@ -230,9 +230,21 @@ exception_t decodeCNodeInvocation(word_t invLabel, word_t length, cap_t cap,
             current_syscall_error.type = seL4_IllegalOperation;
             return EXCEPTION_SYSCALL_ERROR;
         }
-
+        cap_t epCap = lu_ret.slot->cap;
+        
         // Check if original cap
+        // Will need to use mdb operations to step back up the list/tree to check if we are the original cap
 
+        if(cap_endpoint_cap_get_capEPBadge(epCap)!=0) {
+            /* A badged cap cannot be the original endpoint capability */
+            current_syscall_error.type = seL4_InvalidCapability;
+            current_syscall_error.invalidCapNumber = 0;
+            return EXCEPTION_SYSCALL_ERROR;
+        }
+
+        // Checking this is equivalent to whether its an original capability
+        // cte_t *cte_a
+        // mdb_node_set_mdbRevocable(cte_a->cteMDBNode)
 
 
     }
