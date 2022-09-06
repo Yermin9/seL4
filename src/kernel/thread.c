@@ -455,7 +455,7 @@ void switchToThread(tcb_t *thread)
     /* It's possible that this thread is in the IPC_Hold State 
      * Resume the IPC operation, then schedule again
      */
-    if (thread_state_get_tsType(target->tcbState) == ThreadState_BlockedOn_IPC_Hold) {
+    if (thread_state_get_tsType(thread->tcbState) == ThreadState_BlockedOn_IPC_Hold) {
         /* Clear out the scheduler candidate, if there was one, so we can schedule loop again cleanly. */
         NODE_STATE(ksSchedulerAction) = SchedulerAction_ChooseNewThread;
         completeHoldEP(thread);
@@ -728,7 +728,7 @@ void awaken(void)
         assert(refill_ready(NODE_STATE(ksHoldReleaseNextHead)->tcbSchedContext));
 
         /* Remove the TCB */
-        tcb_t *awakened = tcbNextReleaseNextDequeue();
+        tcb_t *awakened = tcbHoldReleaseNextDequeue();
 
         /* Sum budget in */
        if(budget_sufficient_merge(awakened->tcbSchedContext)) {
@@ -739,7 +739,7 @@ void awaken(void)
             /* If there are other pending refills, re-insert into this queue, ordered correctly */
             /* Otherwise, just leave, thread is now "stuck", but that's the user's problem */
             if (!refill_single(awakened->tcbSchedContext)) {
-                tcbReleaseNextEnqueue(awakened);
+                tcbHoldReleaseNextRemove(awakened);
             }
             #ifdef CONFIG_DEBUG_BUILD
             /* In a debug build, warn user about stuck thread */
@@ -767,7 +767,7 @@ void awaken(void)
             /* If no, check if there is another pending refill, if so add to ksHoldReleaseNextHead */
             /* Otherwise, just leave, thread is now "stuck", but that's the user's problem */
             if (!refill_single(awakened->tcbSchedContext)) {
-                tcbReleaseNextEnqueue(awakened);
+                tcbHoldReleaseNextRemove(awakened);
             }
             #ifdef CONFIG_DEBUG_BUILD
             /* In a debug build, warn user about stuck thread */

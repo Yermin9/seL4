@@ -67,7 +67,7 @@ deriveCap_ret_t deriveCap(cte_t *slot, cap_t cap)
         return Arch_deriveCap(slot, cap);
     }
 
-    switch (cap_get_capType(cap)) {
+    switch (cap_get_capType(cap)) { 
     case cap_zombie_cap:
         ret.status = EXCEPTION_NONE;
         ret.cap = cap_null_cap_new();

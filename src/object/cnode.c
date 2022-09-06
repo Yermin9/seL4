@@ -226,8 +226,12 @@ exception_t decodeCNodeInvocation(word_t invLabel, word_t length, cap_t cap,
         // lu_ret should be the target.
         /* TODO */
 
-        cap_get_capType(cap)
+        if(cap_get_capType(lu_ret.slot->cap)!=cap_endpoint_cap) {
+            current_syscall_error.type = seL4_IllegalOperation;
+            return EXCEPTION_SYSCALL_ERROR;
+        }
 
+        // Check if original cap
 
 
 
