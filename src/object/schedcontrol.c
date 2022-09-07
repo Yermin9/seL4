@@ -13,6 +13,8 @@
 static exception_t invokeSchedControl_ConfigureFlags(sched_context_t *target, word_t core, ticks_t budget,
                                                      ticks_t period, word_t max_refills, word_t badge, word_t flags)
 {
+    /* Check if the associated thread was held on an endpoint threshold */
+    bool_t wasIPCHeld = false
 
     target->scBadge = badge;
     target->scSporadic = (flags & seL4_SchedContext_Sporadic) != 0;
@@ -24,8 +26,17 @@ static exception_t invokeSchedControl_ConfigureFlags(sched_context_t *target, wo
         /* remove from scheduler */
         tcbReleaseRemove(target->scTcb);
         tcbSchedDequeue(target->scTcb);
-        /* bill the current consumed amount before adjusting the params */
-        if (NODE_STATE(ksCurSC) == target) {
+
+        /* Check if thread was held in either IPC hold queue */
+        if (thread_state_ptr_get_tcbInHoldReleaseHeadQueue(&target->scTcb->tcbState)) {
+            tcbHoldReleaseHeadRemove(target->scTcb);
+            wasIPCHeld = true;
+        } else if (thread_state_ptr_get_tcbInHoldReleaseNextQueue(&target->scTcb->tcbState)) { 
+            tcbHoldReleaseNextRemove(target->scTcb);
+            wasIPCHeld = true;
+        } else if (NODE_STATE(ksCurSC) == target) {
+            /* An SC attached to a  thread in the IPC Hold state cannot have been the current SC */
+
             /* This could potentially mutate state but if it returns
              * true no state was modified, thus removing it should
              * be the same. */
@@ -60,16 +71,23 @@ static exception_t invokeSchedControl_ConfigureFlags(sched_context_t *target, wo
 
     assert(target->scRefillMax > 0);
     if (target->scTcb) {
-        schedContext_resume(target);
-        if (SMP_TERNARY(core == CURRENT_CPU_INDEX(), true)) {
-            if (isRunnable(target->scTcb) && target->scTcb != NODE_STATE(ksCurThread)) {
-                possibleSwitchTo(target->scTcb);
+        if (wasIPCHeld) {
+            /* Check new budget against threshold */
+            if(budget_sufficient_merge(awakened->tcbSchedContext)) {
+                
             }
-        } else if (isRunnable(target->scTcb)) {
-            SCHED_ENQUEUE(target->scTcb);
-        }
-        if (target->scTcb == NODE_STATE(ksCurThread)) {
-            rescheduleRequired();
+        } else {
+            schedContext_resume(target);
+            if (SMP_TERNARY(core == CURRENT_CPU_INDEX(), true)) {
+                if (isRunnable(target->scTcb) && target->scTcb != NODE_STATE(ksCurThread)) {
+                    possibleSwitchTo(target->scTcb);
+                }
+            } else if (isRunnable(target->scTcb)) {
+                SCHED_ENQUEUE(target->scTcb);
+            }
+            if (target->scTcb == NODE_STATE(ksCurThread)) {
+                rescheduleRequired();
+            }
         }
     }
 

@@ -24,6 +24,7 @@ Add explicit thread_state "BlockedOn_IPC_Hold" - DONE
 Change setNextInterrupt() - DONE
 
 Add threshold field to SC's - DONE
+    - Make sure this is set appropriately - TODO
 
 
 
@@ -47,15 +48,16 @@ Change scheduler - DONE
  - Change switchToThread - DONE
 
 completeHoldEp: Check that IPC is still valid before sending. -DONE
-    - Shouldn't matter - Anything that makes IPC invalidate will remove from hold state
+    - Shouldn't matter - Anything that makes IPC invalidated will remove from hold state
 
 Adjust configuration syscalls:
-- Create seL4\_Endpoint\_SetThreshold 
+- Create seL4\_Endpoint\_SetThreshold - Done
     - Only allow original capability
     - Changed how this is invoked. Must be invoked via Cnode style
     - Still need to set manual reference
     - Currently working in cnode.c
 - Alteration of SC parameters
+    - Budget etc -> In schedcontrol.c
 - All revocation or deletion operations
 
 
