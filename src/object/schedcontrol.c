@@ -72,10 +72,25 @@ static exception_t invokeSchedControl_ConfigureFlags(sched_context_t *target, wo
     assert(target->scRefillMax > 0);
     if (target->scTcb) {
         if (wasIPCHeld) {
-            /* Check new budget against threshold */
-            if(budget_sufficient_merge(awakened->tcbSchedContext)) {
-                
+            if (!refill_ready(target)) {
+                /* Insert into threshold queue waiting for head */
+                tcbHoldReleaseHeadInsert(target->scTcb);
+            } else if (budget_sufficient_merge(target)) {
+                /* Budget is sufficient so insert into scheduler */
+                possibleSwitchTo(target->scTcb);
+            } else if (!refill_single(target)) {
+                /* Wait for release of next refill */
+                tcbHoldReleaseNextInsert(target->scTcb);
             }
+            #ifdef CONFIG_DEBUG_BUILD
+            /* If no cases trigger thread has insufficient budget to clear threshold and has no pending refills*/
+            /* In a debug build, warn user about stuck thread */
+            else {
+                printf("Thread stuck on endpoint threshold due to insufficient budget %p \"%s\"\n", target->scTcb, TCB_PTR_DEBUG_PTR(awakened)->tcbName);
+            }
+            #endif
+            
+
         } else {
             schedContext_resume(target);
             if (SMP_TERNARY(core == CURRENT_CPU_INDEX(), true)) {

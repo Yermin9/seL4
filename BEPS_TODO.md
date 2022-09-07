@@ -50,15 +50,20 @@ Change scheduler - DONE
 completeHoldEp: Check that IPC is still valid before sending. -DONE
     - Shouldn't matter - Anything that makes IPC invalidated will remove from hold state
 
-Adjust configuration syscalls:
+Adjust configuration syscalls: - TODO
 - Create seL4\_Endpoint\_SetThreshold - Done
     - Only allow original capability
     - Changed how this is invoked. Must be invoked via Cnode style
     - Still need to set manual reference
     - Currently working in cnode.c
-- Alteration of SC parameters
-    - Budget etc -> In schedcontrol.c
+- Alteration of SC parameters - DONE
+    - Budget etc
+- Unbind SC
+    - Remove from endpoints and fail
 - All revocation or deletion operations
+    - TCB
+    - SC
+    - Endpoint 
 
 
 TODO: Wrap everything in ifdef CONFIG_ENDPOINT_THRESHOLDS
