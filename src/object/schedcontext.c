@@ -305,6 +305,26 @@ void schedContext_bindTCB(sched_context_t *sc, tcb_t *tcb)
     if (sc_sporadic(sc) && sc_active(sc) && sc != NODE_STATE(ksCurSC)) {
         refill_unblock_check(sc);
     }
+
+    #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    /* Check if the TCB was waiting on an endpoint
+     * If so, insert into appropriate queue, or scheduler */
+    if (thread_state_get_tsType(tcb->tcbState)==ThreadState_BlockedOn_IPC_Hold) {
+            if (!refill_ready(sc)) {
+                /* Insert into threshold queue waiting for head */
+                tcbHoldReleaseHeadEnqueue(tcb);
+            } else if (refill_sufficient(sc, sc->threshold)) {
+                /* Budget is sufficient so insert into scheduler */
+                possibleSwitchTo(tcb);
+            } else if (!refill_single(sc)) {
+                /* Wait for release of next refill */
+                tcbHoldReleaseNextEnqueue(tcb);
+            }
+        return;
+    }
+    #endif
+
+
     schedContext_resume(sc);
     if (isSchedulable(tcb)) {
         SCHED_ENQUEUE(tcb);
@@ -328,6 +348,16 @@ void schedContext_unbindTCB(sched_context_t *sc, tcb_t *tcb)
 
     tcbSchedDequeue(sc->scTcb);
     tcbReleaseRemove(sc->scTcb);
+
+    #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    /* Remove from IPCHold Queues if applicable */
+    if (thread_state_get_tcbInHoldReleaseHeadQueue(tcb->tcbState)) {
+        tcbHoldReleaseHeadRemove(tcb);
+    } else if (thread_state_get_tcbInHoldReleaseNextQueue(tcb->tcbState)) { 
+        tcbHoldReleaseNextRemove(tcb);
+    }
+    #endif
+
 
     sc->scTcb->tcbSchedContext = NULL;
     sc->scTcb = NULL;

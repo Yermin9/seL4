@@ -739,7 +739,7 @@ void awaken(void)
             /* If there are other pending refills, re-insert into this queue, ordered correctly */
             /* Otherwise, just leave, thread is now "stuck", but that's the user's problem */
             if (!refill_single(awakened->tcbSchedContext)) {
-                tcbHoldReleaseNextInsert(awakened);
+                tcbHoldReleaseNextEnqueue(awakened);
             }
             #ifdef CONFIG_DEBUG_BUILD
             /* In a debug build, warn user about stuck thread */
@@ -767,7 +767,7 @@ void awaken(void)
             /* If no, check if there is another pending refill, if so add to ksHoldReleaseNextHead */
             /* Otherwise, just leave, thread is now "stuck", but that's the user's problem */
             if (!refill_single(awakened->tcbSchedContext)) {
-                tcbHoldReleaseNextInsert(awakened);
+                tcbHoldReleaseNextEnqueue(awakened);
             }
             #ifdef CONFIG_DEBUG_BUILD
             /* In a debug build, warn user about stuck thread */

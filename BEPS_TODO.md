@@ -56,10 +56,14 @@ Adjust configuration syscalls: - TODO
     - Changed how this is invoked. Must be invoked via Cnode style
     - Still need to set manual reference
     - Currently working in cnode.c
-- Alteration of SC parameters - DONE
+- Alteration of SC parameters - TODO
     - Budget etc
-- Unbind SC
-    - Remove from endpoints and fail
+    - If budget reduced, move out of endpoint queue
+- Unbind SC and UnbindObject - DONE
+    - Leave in endpoint, but remove from queues
+- Bind SC
+    - If in threshold, add to appropriate queues
+- YieldTo
 - All revocation or deletion operations
     - TCB
     - SC

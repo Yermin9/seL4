@@ -44,6 +44,11 @@ static inline bool_t PURE isRunnable(const tcb_t *thread)
 #ifdef CONFIG_VTX
     case ThreadState_RunningVM:
 #endif
+#ifdef CONFIG_KERNEL_MCS
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    case ThreadState_BlockedOn_IPC_Hold:
+#endif
+#endif
         return true;
 
     default:
@@ -149,12 +154,22 @@ static inline void commitTime(void)
     NODE_STATE(ksConsumed) = 0llu;
 }
 
+
+/* This calls isRunnable(), which checks whether the TCB ThreadState is a runnable state
+ * It additionally checks whether the thread has a valid SC and is not waiting for budget release.
+ */
 static inline bool_t PURE isSchedulable(const tcb_t *thread)
 {
     return isRunnable(thread) &&
            thread->tcbSchedContext != NULL &&
            thread->tcbSchedContext->scRefillMax > 0 &&
-           !thread_state_get_tcbInReleaseQueue(thread->tcbState);
+           !thread_state_get_tcbInReleaseQueue(thread->tcbState) 
+           #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+           &&
+           !thread_state_get_tcbInHoldReleaseNextQueue(thread->tcbState) &&
+           !thread_state_get_tcbInHoldReleaseHeadQueue(thread->tcbState)
+           #endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
+           ;
 }
 #else
 #define isSchedulable isRunnable

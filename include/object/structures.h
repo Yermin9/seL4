@@ -168,8 +168,10 @@ enum _thread_state {
     ThreadState_BlockedOnSend,
     ThreadState_BlockedOnReply,
     ThreadState_BlockedOnNotification,
+#ifdef CONFIG_KERNEL_MCS
 #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
     ThreadState_BlockedOn_IPC_Hold,
+#endif
 #endif
 #ifdef CONFIG_VTX
     ThreadState_RunningVM,
@@ -306,12 +308,14 @@ struct tcb {
 #ifdef CONFIG_KERNEL_MCS
     /* if tcb is in a call, pointer to the reply object, 1 word */
     reply_t *tcbReply;
-
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
     /* if tcb is in IPC_Hold state, the relevant endpoint */
     endpoint_t *holdEP;
 
     /* if tcb is in IPC_Hold state, the relevant cptr */
     cptr_t holdCptr;
+#endif
+
 #endif
 #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
     /* 16 bytes (12 bytes aarch32) */
