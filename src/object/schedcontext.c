@@ -322,6 +322,13 @@ void schedContext_bindTCB(sched_context_t *sc, tcb_t *tcb)
             }
         return;
     }
+
+
+    /* If TCB was associated with a thresholded endpoint, set sc->threshold appropriately */
+    if (tcb->holdEP) {
+        sc->threshold = endpoint_ptr_get_epThreshold(tcb->holdEP);
+    }
+
     #endif
 
 
@@ -356,6 +363,9 @@ void schedContext_unbindTCB(sched_context_t *sc, tcb_t *tcb)
     } else if (thread_state_get_tcbInHoldReleaseNextQueue(tcb->tcbState)) { 
         tcbHoldReleaseNextRemove(tcb);
     }
+
+    /* Set sc threshold to zero */
+    sc->threshold=0;
     #endif
 
 

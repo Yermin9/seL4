@@ -15,6 +15,7 @@ Add to thread_state: tcbInHoldReleaseHeadQueue tcbInHoldReleaseNextQueue - DONE
 
 Add pointer to TCB to endpoint being waited on. - DONE "holdCap"
 + cptr holdCptr
++ holdEP
 
 Add explicit thread_state "BlockedOn_IPC_Hold" - DONE
 
@@ -51,24 +52,27 @@ completeHoldEp: Check that IPC is still valid before sending. -DONE
     - Shouldn't matter - Anything that makes IPC invalidated will remove from hold state
 
 Adjust configuration syscalls: - TODO
-- Create seL4\_Endpoint\_SetThreshold - Done
+- Create seL4\_Endpoint\_SetThreshold - TODO
     - Only allow original capability
     - Changed how this is invoked. Must be invoked via Cnode style
     - Still need to set manual reference
-    - Currently working in cnode.c
-- Alteration of SC parameters - TODO
+    - Shuffle between endpoint queues
+- Alteration of SC parameters - DONE
     - Budget etc
     - If budget reduced, move out of endpoint queue
 - Unbind SC and UnbindObject - DONE
     - Leave in endpoint, but remove from queues
-- Bind SC
+- Bind SC - DONE
     - If in threshold, add to appropriate queues
-- YieldTo
+- YieldTo - TODO
 - All revocation or deletion operations
     - TCB
     - SC
     - Endpoint 
 
+
+TODO: Need to clear thread->holdCptr and SC->threhsold and stuff
+TODO: Need to set sc->threshold and tcb->holdEP
 
 TODO: Wrap everything in ifdef CONFIG_ENDPOINT_THRESHOLDS
  -- Actually use CONFIG_KERNEL_IPCTHRESHOLDS

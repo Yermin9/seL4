@@ -34,10 +34,11 @@ static exception_t invokeSchedControl_ConfigureFlags(sched_context_t *target, wo
         } else if (thread_state_get_tcbInHoldReleaseNextQueue(target->scTcb->tcbState)) { 
             tcbHoldReleaseNextRemove(target->scTcb);
         } else if (NODE_STATE(ksCurSC) == target) {
+            /* An SC attached to a  thread in the IPC Hold state cannot have been the current SC */
         #else
         if (NODE_STATE(ksCurSC) == target) {
         #endif
-            /* An SC attached to a  thread in the IPC Hold state cannot have been the current SC */
+            
 
             /* This could potentially mutate state but if it returns
              * true no state was modified, thus removing it should
@@ -98,11 +99,24 @@ static exception_t invokeSchedControl_ConfigureFlags(sched_context_t *target, wo
             /* The thread was previously in a thresholded endpoint, but had its budget reduced,
              * and now no longer has enough budget to clear the threshold */
 
-            // TODO
-            // Remove from IPC queue
-            // Insert into IPC Hold queue
+            endpoint_t * epptr = EP_PTR(thread_state_get_blockingObject(target->scTcb->tcbState));
 
-            // Insert into IPC Release Hold queue
+            /* Remove from normal IPC queue */
+            cancelIPC(tcb_t *tptr);
+
+
+            /* Insert into IPC Hold queue */
+            addHoldEP(epptr, target->scTcb);
+
+            /* Insert into appropriate IPC Release Hold queue */
+            if (!refill_ready(target)) {
+                /* Insert into threshold queue waiting for head */
+                tcbHoldReleaseHeadEnqueue(target->scTcb);
+            } else if (!refill_single(target)) {
+                /* Wait for release of next refill */
+                tcbHoldReleaseNextEnqueue(target->scTcb);
+            }
+
             
         } else {
         #endif

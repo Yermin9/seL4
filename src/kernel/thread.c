@@ -456,7 +456,7 @@ void switchToThread(tcb_t *thread)
      * Resume the IPC operation, then schedule again
      */
     if (thread_state_get_tsType(thread->tcbState) == ThreadState_BlockedOn_IPC_Hold) {
-        /* Clear out the scheduler candidate, if there was one, so we can schedule loop again cleanly. */
+        /* Clear out the scheduler candidate, if there was one, so we can loop again. */
         NODE_STATE(ksSchedulerAction) = SchedulerAction_ChooseNewThread;
         completeHoldEP(thread);
         return;
