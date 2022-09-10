@@ -56,7 +56,8 @@ Adjust configuration syscalls: - TODO
     - Only allow original capability
     - Changed how this is invoked. Must be invoked via Cnode style
     - Still need to set manual reference
-    - Shuffle between endpoint queues
+    - Shuffle between endpoint queues - IN PROGRESS endpoint.c
+
 - Alteration of SC parameters - DONE
     - Budget etc
     - If budget reduced, move out of endpoint queue
@@ -68,7 +69,7 @@ Adjust configuration syscalls: - TODO
 - All revocation or deletion operations
     - TCB
     - SC
-    - Endpoint 
+    - Endpoint cap
 
 
 TODO: Need to clear thread->holdCptr and SC->threhsold and stuff
@@ -81,3 +82,6 @@ Config options is -DKernelIpcThresholds
 TODO: Put a CONFIG_KERNEL_MCS 1 at the top of tcb.c
 
 TODO: Handle Round Robin threads
+
+
+TODO: Look at thread_state_ptr_get_blockingObject()

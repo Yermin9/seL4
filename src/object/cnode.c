@@ -256,20 +256,9 @@ exception_t decodeCNodeInvocation(word_t invLabel, word_t length, cap_t cap,
             current_syscall_error.invalidCapNumber = 0;
             return EXCEPTION_SYSCALL_ERROR;
         }
-
-        /* Set threshold endpoint */
-        time_t old_threshold = endpoint_ptr_get_epThreshold(ep_ptr);
+        
         endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(cap));
-        endpoint_ptr_set_epThreshold(ep_ptr,threshold);
-
-
-        /* TODO shuffle between queues */
-        /* Don't need to do anything where old==new */
-        if (old_threshold>threshold) {
-            /* might need to move some threads from normal IPC queue to hold queue*/
-        } else {
-            /* Might need to move some threads from hold queue to ipc queue */
-        }
+        setThreshold(ep_ptr, threshold);
 
         return EXCEPTION_NONE;
 

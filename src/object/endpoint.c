@@ -249,6 +249,13 @@ void receiveIPC(tcb_t *thread, cap_t cap, bool_t isBlocking)
                 }
             }
 
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+            /* Set SC threshold to zero as IPC is complete */
+            if (sender->tcbSchedContext != NULL) {
+               sender->tcbSchedContext->threshold=0;
+            }
+#endif
+
             if (do_call ||
                 seL4_Fault_get_seL4_FaultType(sender->tcbFault) != seL4_Fault_NullFault) {
                 if ((canGrant || canGrantReply) && replyPtr != NULL) {
@@ -573,6 +580,81 @@ void completeHoldEP(tcb_t *thread) {
                    cap_endpoint_cap_get_capCanGrantReply(lu_ret.cap),
                    true,thread,EP_PTR(cap_endpoint_cap_get_capEPPtr(lu_ret.cap)));
 }
+
+
+void setThreshold(endpoint_t * epptr, time_t threshold) {
+        /* Set endpoint threshold */
+        time_t old_threshold = endpoint_ptr_get_epThreshold(epptr);
+        endpoint_ptr_set_epThreshold(epptr,threshold);
+
+
+        /* Set the sc->threshold field of all associated threads SC's */
+        tcb_t *thread = TCB_PTR(endpoint_ptr_get_epQueue_head(epptr));
+        for (; thread; thread = thread->tcbEPNext) {
+            if (thread->tcbSchedContext) {
+                thread->tcbSchedContext->threshold = threshold;
+            }
+        }
+
+        /* Set the sc threshold for TCB's in the hold queue as well */
+        tcb_t * thread = (tcb_t *)endpoint_ptr_get_epHoldQueue_head(epptr);
+        for (; thread; thread = thread->tcbEPNext) {
+            if (thread->tcbSchedContext) {
+                thread->tcbSchedContext->threshold = threshold;
+            }
+        }
+
+        /* Don't need to do anything where old==new */
+        if (old_threshold>threshold) {
+            /* might need to move some threads from normal IPC queue to hold queue*/
+            maybeMoveNormaltoHold(epptr);
+        } else {
+            /* Might need to move some threads from hold queue to ipc queue */
+            maybeMoveHoldtoNormal(epptr);
+        }
+}
+
+
+void maybeMoveHoldtoNormal(endpoint_t * epptr) {
+    tcb_t * thread = (tcb_t *)endpoint_ptr_get_epHoldQueue_head(epptr);
+    tcb_t * next;
+    while(thread!=NULL) {
+        next = thread->tcbEPNext;
+        if (refill_sufficient(thread->tcbSchedContext,thread->tcbSchedContext->threshold)) {
+            completeHoldEP(thread);
+        }
+        thread=next;
+    }
+}
+
+void maybeMoveNormaltoHold(endpoint_t * epptr) {
+
+
+    /* TODO */
+    tcb_queue_t queue = ep_ptr_get_queue(epptr);
+    tcb_t * thread = queue.head;
+    tcb_t * next;
+
+
+    for (;thread; thread = next) {
+        next = thread->tcbEPNext;
+        if (!refill_sufficient(thread->tcbSchedContext,thread->tcbSchedContext->threshold)) {
+            thread_state_ptr_set_tsType(&thread->tcbState,
+                            ThreadState_BlockedOn_IPC_Hold);
+        }
+        tcbEPDequeue(thread, queue);
+        addHoldEP(epptr, thread);
+    }
+
+    ep_ptr_set_queue(epptr, queue);
+
+    if (!queue.head) {
+        endpoint_ptr_set_state(epptr, EPState_Idle);
+    }
+
+}
+
+
 
 #endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
 

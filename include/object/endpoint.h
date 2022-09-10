@@ -37,6 +37,15 @@ void removeHoldEP(tcb_t *thread);
 /* Completes the Held IPC operation. To be called when the thread has sufficient budget */
 void completeHoldEP(tcb_t *thread);
 
+
+void setThreshold(endpoint_t * epptr, time_t threshold);
+
+/* If the endpoint threshold was decreased, potentially some held threads will now have enough budget */
+void maybeMoveHoldtoNormal(endpoint_t * epptr);
+
+/* If the threshold was increase,d potentially some threads in the normal queue won't have enough budget anymore */
+void maybeMoveNormaltoHold(endpoint_t * epptr);
+
 #endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
 
 #else
