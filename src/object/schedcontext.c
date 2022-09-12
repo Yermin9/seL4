@@ -357,11 +357,19 @@ void schedContext_unbindTCB(sched_context_t *sc, tcb_t *tcb)
     tcbReleaseRemove(sc->scTcb);
 
     #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+
     /* Remove from IPCHold Queues if applicable */
-    if (thread_state_get_tcbInHoldReleaseHeadQueue(tcb->tcbState)) {
-        tcbHoldReleaseHeadRemove(tcb);
-    } else if (thread_state_get_tcbInHoldReleaseNextQueue(tcb->tcbState)) { 
-        tcbHoldReleaseNextRemove(tcb);
+    if (thread_state_get_tsType(tcb->tcbState)==ThreadState_BlockedOn_IPC_Hold) {
+        if (thread_state_get_tcbInHoldReleaseHeadQueue(tcb->tcbState)) {
+            tcbHoldReleaseHeadRemove(tcb);
+        } else if (thread_state_get_tcbInHoldReleaseNextQueue(tcb->tcbState)) { 
+            tcbHoldReleaseNextRemove(tcb);
+        }
+    } else if (thread_state_get_tsType(tcb->tcbState)==ThreadState_BlockedOnSend) {
+        endpoint_t *epptr = EP_PTR(thread_state_ptr_get_blockingObject(&tcb->tcbState));
+        if (endpoint_ptr_get_epThreshold(epptr)!=0) {
+            /* Need to move thread from normal IPC queue to IPC Hold queue */
+        }
     }
 
     /* Set sc threshold to zero */

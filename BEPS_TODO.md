@@ -52,17 +52,19 @@ completeHoldEp: Check that IPC is still valid before sending. -DONE
     - Shouldn't matter - Anything that makes IPC invalidated will remove from hold state
 
 Adjust configuration syscalls: - TODO
-- Create seL4\_Endpoint\_SetThreshold - TODO
+- Create seL4\_Endpoint\_SetThreshold - DONE
     - Only allow original capability
     - Changed how this is invoked. Must be invoked via Cnode style
     - Still need to set manual reference
-    - Shuffle between endpoint queues - IN PROGRESS endpoint.c
+    - Shuffle between endpoint queues
 
 - Alteration of SC parameters - DONE
     - Budget etc
-    - If budget reduced, move out of endpoint queue
-- Unbind SC and UnbindObject - DONE
+    - If budget changed
+        - Move between endpoint queue if required
+- Unbind SC and UnbindObject - TODO
     - Leave in endpoint, but remove from queues
+    - Remove from Normal IPC queue if applicable
 - Bind SC - DONE
     - If in threshold, add to appropriate queues
 - YieldTo - TODO

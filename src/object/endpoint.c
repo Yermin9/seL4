@@ -630,7 +630,6 @@ void maybeMoveHoldtoNormal(endpoint_t * epptr) {
 void maybeMoveNormaltoHold(endpoint_t * epptr) {
 
 
-    /* TODO */
     tcb_queue_t queue = ep_ptr_get_queue(epptr);
     tcb_t * thread = queue.head;
     tcb_t * next;
