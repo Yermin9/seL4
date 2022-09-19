@@ -44,11 +44,6 @@ static inline bool_t PURE isRunnable(const tcb_t *thread)
 #ifdef CONFIG_VTX
     case ThreadState_RunningVM:
 #endif
-#ifdef CONFIG_KERNEL_MCS
-#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
-    case ThreadState_BlockedOn_IPC_Hold:
-#endif
-#endif
         return true;
 
     default:

@@ -597,21 +597,41 @@ void setThreshold(endpoint_t * epptr, time_t threshold) {
         }
 
         /* Set the sc threshold for TCB's in the hold queue as well */
-        tcb_t * thread = (tcb_t *)endpoint_ptr_get_epHoldQueue_head(epptr);
+        thread = (tcb_t *)endpoint_ptr_get_epHoldQueue_head(epptr);
         for (; thread; thread = thread->tcbEPNext) {
             if (thread->tcbSchedContext) {
                 thread->tcbSchedContext->threshold = threshold;
             }
         }
 
-        /* Don't need to do anything where old==new */
-        if (old_threshold>threshold) {
-            /* might need to move some threads from normal IPC queue to hold queue*/
-            maybeMoveNormaltoHold(epptr);
+        if (threshold!=0) {
+            /* Don't need to do anything where old==new */
+            if (old_threshold>threshold) {
+                /* might need to move some threads from normal IPC queue to hold queue*/
+                maybeMoveNormaltoHold(epptr);
+            } else {
+                /* Might need to move some threads from hold queue to ipc queue */
+                maybeMoveHoldtoNormal(epptr);
+            }
         } else {
-            /* Might need to move some threads from hold queue to ipc queue */
-            maybeMoveHoldtoNormal(epptr);
+            /* In the specific case where the new threshold is zero, we move all held threads to the normal queue */
+            moveAllHoldtoNormal(epptr);
         }
+
+
+
+
+}
+
+
+void MoveAllHoldtoNormal(endpoint_t * epptr) {
+    tcb_t * thread = (tcb_t *)endpoint_ptr_get_epHoldQueue_head(epptr);
+    tcb_t * next;
+    while(thread!=NULL) {
+        next = thread->tcbEPNext;
+        completeHoldEP(thread);
+        thread=next;
+    }
 }
 
 
@@ -620,7 +640,7 @@ void maybeMoveHoldtoNormal(endpoint_t * epptr) {
     tcb_t * next;
     while(thread!=NULL) {
         next = thread->tcbEPNext;
-        if (refill_sufficient(thread->tcbSchedContext,thread->tcbSchedContext->threshold)) {
+        if (thread->tcbSchedContext && refill_sufficient(thread->tcbSchedContext,thread->tcbSchedContext->threshold)) {
             completeHoldEP(thread);
         }
         thread=next;

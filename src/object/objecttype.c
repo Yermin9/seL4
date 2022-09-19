@@ -695,11 +695,6 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
                 /* Call refill_unblock_check to merge all released replenishments into the head */
                 refill_unblock_check(NODE_STATE(ksCurThread)->tcbSchedContext);
 
-
-                /* Then, charge usage via commitTime()??? */
-                /* Possibly can leave this call to happen at the end of schedule() instead... */
-                commitTime();
-
                 /* Save the Cptr */
                 NODE_STATE(ksCurThread)->holdCptr = capIndex;
 

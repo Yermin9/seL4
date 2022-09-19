@@ -40,8 +40,12 @@ void completeHoldEP(tcb_t *thread);
 
 void setThreshold(endpoint_t * epptr, time_t threshold);
 
+
+
 /* If the endpoint threshold was decreased, potentially some held threads will now have enough budget */
 void maybeMoveHoldtoNormal(endpoint_t * epptr);
+
+void moveAllHoldtoNormal(endpoint_t * epptr);
 
 /* If the threshold was increase,d potentially some threads in the normal queue won't have enough budget anymore */
 void maybeMoveNormaltoHold(endpoint_t * epptr);

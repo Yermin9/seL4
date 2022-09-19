@@ -58,17 +58,19 @@ Adjust configuration syscalls: - TODO
     - Still need to set manual reference
     - Shuffle between endpoint queues
 
-- Alteration of SC parameters - DONE
+- Alteration of SC parameters - DONE - But could do with a clean-up
     - Budget etc
     - If budget changed
         - Move between endpoint queue if required
-- Unbind SC and UnbindObject - TODO
+- Unbind SC and UnbindObject - DONE
     - Leave in endpoint, but remove from queues
     - Remove from Normal IPC queue if applicable
 - Bind SC - DONE
     - If in threshold, add to appropriate queues
-- YieldTo - TODO
-- All revocation or deletion operations
+- YieldTo - DONE
+
+
+- All revocation or deletion operations - TODO
     - TCB
     - SC
     - Endpoint cap

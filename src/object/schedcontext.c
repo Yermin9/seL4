@@ -306,31 +306,26 @@ void schedContext_bindTCB(sched_context_t *sc, tcb_t *tcb)
         refill_unblock_check(sc);
     }
 
-    #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
     /* Check if the TCB was waiting on an endpoint
      * If so, insert into appropriate queue, or scheduler */
     if (thread_state_get_tsType(tcb->tcbState)==ThreadState_BlockedOn_IPC_Hold) {
-            if (!refill_ready(sc)) {
-                /* Insert into threshold queue waiting for head */
-                tcbHoldReleaseHeadEnqueue(tcb);
-            } else if (refill_sufficient(sc, sc->threshold)) {
-                /* Budget is sufficient so insert into scheduler */
-                possibleSwitchTo(tcb);
-            } else if (!refill_single(sc)) {
-                /* Wait for release of next refill */
-                tcbHoldReleaseNextEnqueue(tcb);
-            }
+        endpoint_t * epptr = EP_PTR(thread_state_ptr_get_blockingObject(state));
+        sc->threshold = endpoint_ptr_get_epThreshold(epptr);
+
+        if (!refill_ready(sc)) {
+            /* Insert into threshold queue waiting for head */
+            tcbHoldReleaseHeadEnqueue(tcb);
+        } else if (refill_sufficient(sc, sc->threshold)) {
+            /* Budget is sufficient so insert into scheduler */
+            possibleSwitchTo(tcb);
+        } else if (!refill_single(sc)) {
+            /* Wait for release of next refill */
+            tcbHoldReleaseNextEnqueue(tcb);
+        }
         return;
     }
-
-
-    /* If TCB was associated with a thresholded endpoint, set sc->threshold appropriately */
-    if (tcb->holdEP) {
-        sc->threshold = endpoint_ptr_get_epThreshold(tcb->holdEP);
-    }
-
-    #endif
-
+#endif
 
     schedContext_resume(sc);
     if (isSchedulable(tcb)) {
@@ -369,6 +364,20 @@ void schedContext_unbindTCB(sched_context_t *sc, tcb_t *tcb)
         endpoint_t *epptr = EP_PTR(thread_state_ptr_get_blockingObject(&tcb->tcbState));
         if (endpoint_ptr_get_epThreshold(epptr)!=0) {
             /* Need to move thread from normal IPC queue to IPC Hold queue */
+            /* Remove from normal IPC queue */
+            cancelIPC(tcb);
+
+            /* Insert into IPC Hold queue */
+            addHoldEP(epptr, tcb);
+
+            /* Insert into appropriate IPC Release Hold queue */
+            if (!refill_ready(sc)) {
+                /* Insert into threshold queue waiting for head */
+                tcbHoldReleaseHeadEnqueue(tcb);
+            } else if (!refill_single(sc)) {
+                /* Wait for release of next refill */
+                tcbHoldReleaseNextEnqueue(tcb);
+            }
         }
     }
 

@@ -1202,6 +1202,7 @@
             <cap_param append_description="CPTR to the CNode at the root of the CSpace where the endpoint capability resides. Must be at a depth equivalent to the wordsize."/>
             <param dir="in" name="index" type="seL4_Word" description="CPTR to the slot where the endpoint capability resides. Resolved from the root of the _service parameter."/>
             <param dir="in" name="depth" type="seL4_Uint8" description="Number of bits of index to resolve to find the slot being targeted."/>
+            <param dir="in" name="threshold" type="seL4_Time" description="Value of the threshold to set."/>
             <error name="seL4_FailedLookup">
                 <description>
                     The <texttt text="index"/> or <texttt text="depth"/> is invalid <docref>(see <autoref label="s:cspace-addressing"/>)</docref>.
