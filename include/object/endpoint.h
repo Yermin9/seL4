@@ -50,6 +50,10 @@ void moveAllHoldtoNormal(endpoint_t * epptr);
 /* If the threshold was increase,d potentially some threads in the normal queue won't have enough budget anymore */
 void maybeMoveNormaltoHold(endpoint_t * epptr);
 
+
+/* Removes a thread from the normal ipc queue, in preparation for entering the IPC Hold queue */
+void removeIPC(tcb_t *tptr);
+
 #endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
 
 #else

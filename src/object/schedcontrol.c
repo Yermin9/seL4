@@ -103,7 +103,7 @@ static exception_t invokeSchedControl_ConfigureFlags(sched_context_t *target, wo
             endpoint_t * epptr = EP_PTR(thread_state_get_blockingObject(target->scTcb->tcbState));
 
             /* Remove from normal IPC queue */
-            cancelIPC(target->scTcb);
+            removeIPC(target->scTcb);
 
 
             /* Insert into IPC Hold queue */

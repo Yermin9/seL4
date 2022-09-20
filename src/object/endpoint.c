@@ -316,6 +316,43 @@ void replyFromKernel_success_empty(tcb_t *thread)
                     seL4_MessageInfo_new(0, 0, 0, 0)));
 }
 
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+void removeIPC(tcb_t *tptr) {
+    assert(thread_state_ptr_get_tsType(&tptr->tcbState)==ThreadState_BlockedOnSend);
+
+    endpoint_t *epptr;
+    tcb_queue_t queue;
+
+    epptr = EP_PTR(thread_state_ptr_get_blockingObject(state));
+
+    /* Haskell error "blockedIPCCancel: endpoint must not be idle" */
+    assert(endpoint_ptr_get_state(epptr) != EPState_Idle);
+
+    /* Dequeue TCB */
+    queue = ep_ptr_get_queue(epptr);
+    queue = tcbEPDequeue(tptr, queue);
+    ep_ptr_set_queue(epptr, queue);
+
+    if (!queue.head) {
+        endpoint_ptr_set_state(epptr, EPState_Idle);
+    }
+
+#ifdef CONFIG_KERNEL_MCS
+    reply_t *reply = REPLY_PTR(thread_state_get_replyObject(tptr->tcbState));
+    if (reply != NULL) {
+        reply_unlink(reply, tptr);
+    }
+#endif
+    setThreadState(tptr, ThreadState_Inactive);
+
+}
+
+#endif
+
+
+
+
 void cancelIPC(tcb_t *tptr)
 {
     thread_state_t *state = &tptr->tcbState;
@@ -356,6 +393,12 @@ void cancelIPC(tcb_t *tptr)
         break;
     }
 
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    case ThreadState_BlockedOn_IPC_Hold:
+        removeHoldEP(tptr);
+        break;
+#endif
+
     case ThreadState_BlockedOnNotification:
         cancelSignal(tptr,
                      NTFN_PTR(thread_state_ptr_get_blockingObject(state)));
@@ -387,12 +430,42 @@ void cancelIPC(tcb_t *tptr)
 
 void cancelAllIPC(endpoint_t *epptr)
 {
+    tcb_t *thread;
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    thread = TCB_PTR(endpoint_ptr_get_epHoldQueue_head(epptr));
+    while(thread!=NULL) {
+        reply_t *reply = REPLY_PTR(thread_state_get_replyObject(thread->tcbState));
+        if (reply != NULL) {
+            reply_unlink(reply, thread);
+        }
+        if (seL4_Fault_get_seL4_FaultType(thread->tcbFault) == seL4_Fault_NullFault) {
+            setThreadState(thread, ThreadState_Restart);
+            if (sc_sporadic(thread->tcbSchedContext)) {
+                /* We know that the thread can't have the current SC
+                    * as its own SC as this point as it should still be
+                    * associated with the current thread, or no thread.
+                    * This check is added here to reduce the cost of
+                    * proving this to be true as a short-term stop-gap. */
+                assert(thread->tcbSchedContext != NODE_STATE(ksCurSC));
+                if (thread->tcbSchedContext != NODE_STATE(ksCurSC)) {
+                    refill_unblock_check(thread->tcbSchedContext);
+                }
+            }
+            possibleSwitchTo(thread);
+        } else {
+            setThreadState(thread, ThreadState_Inactive);
+        }
+        thread=thread->tcbEPNext;
+    }
+    rescheduleRequired();
+#endif
+
     switch (endpoint_ptr_get_state(epptr)) {
     case EPState_Idle:
         break;
 
     default: {
-        tcb_t *thread = TCB_PTR(endpoint_ptr_get_epQueue_head(epptr));
+        thread = TCB_PTR(endpoint_ptr_get_epQueue_head(epptr));
 
         /* Make endpoint idle */
         endpoint_ptr_set_state(epptr, EPState_Idle);
@@ -536,6 +609,8 @@ void addHoldEP(endpoint_t * epptr, tcb_t *thread) {
     thread->holdEP = epptr;
 
     endpoint_ptr_set_epHoldQueue_head(epptr,(word_t)thread);
+
+    setThreadState(thread, ThreadState_BlockedOn_IPC_Hold);
 }
 
 void removeHoldEP(tcb_t *thread) {

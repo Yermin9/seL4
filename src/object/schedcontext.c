@@ -365,7 +365,7 @@ void schedContext_unbindTCB(sched_context_t *sc, tcb_t *tcb)
         if (endpoint_ptr_get_epThreshold(epptr)!=0) {
             /* Need to move thread from normal IPC queue to IPC Hold queue */
             /* Remove from normal IPC queue */
-            cancelIPC(tcb);
+            removeIPC(tcb);
 
             /* Insert into IPC Hold queue */
             addHoldEP(epptr, tcb);

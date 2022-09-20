@@ -71,9 +71,9 @@ Adjust configuration syscalls: - TODO
 
 
 - All revocation or deletion operations - TODO
-    - TCB
-    - SC
-    - Endpoint cap
+    - TCB - Done
+    - SC - Done
+    - Endpoint cap - Done
 
 
 TODO: Need to clear thread->holdCptr and SC->threhsold and stuff
