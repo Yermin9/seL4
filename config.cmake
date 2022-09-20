@@ -527,7 +527,7 @@ config_string(
 config_string(
     KernelIpcThresholds KERNEL_IPCTHRESHOLDS
     "Enables thresholds on IPC Endpoints"
-    DEFAULT 0
+    DEFAULT DEFAULT_DISABLED
     UNQUOTE
     DEPENDS "KernelIsMCS" UNDEF_DISABLED
 )

@@ -399,6 +399,9 @@ void schedule(void)
             }
         }
     }
+
+    NODE_STATE(ksSchedulerAction) = SchedulerAction_ResumeCurrentThread;
+
 #ifdef ENABLE_SMP_SUPPORT
     doMaskReschedule(ARCH_NODE_STATE(ipiReschedulePending));
     ARCH_NODE_STATE(ipiReschedulePending) = 0;
