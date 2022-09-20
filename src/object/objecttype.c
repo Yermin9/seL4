@@ -735,7 +735,7 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
                    cap_endpoint_cap_get_capCanGrantReply(cap), block, call, canDonate);
 #else
         return performInvocation_Endpoint(
-                   EP_PTR(cap_endpoint_cap_get_capEPPtr(cap)),
+                   ep_ptr,
                    cap_endpoint_cap_get_capEPBadge(cap),
                    cap_endpoint_cap_get_capCanGrant(cap),
                    cap_endpoint_cap_get_capCanGrantReply(cap), block, call);

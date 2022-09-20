@@ -310,7 +310,7 @@ void schedContext_bindTCB(sched_context_t *sc, tcb_t *tcb)
     /* Check if the TCB was waiting on an endpoint
      * If so, insert into appropriate queue, or scheduler */
     if (thread_state_get_tsType(tcb->tcbState)==ThreadState_BlockedOn_IPC_Hold) {
-        endpoint_t * epptr = EP_PTR(thread_state_ptr_get_blockingObject(state));
+        endpoint_t * epptr = EP_PTR(thread_state_ptr_get_blockingObject(&tcb->tcbState));
         sc->threshold = endpoint_ptr_get_epThreshold(epptr);
 
         if (!refill_ready(sc)) {

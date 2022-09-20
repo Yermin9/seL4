@@ -324,6 +324,8 @@ void removeIPC(tcb_t *tptr) {
     endpoint_t *epptr;
     tcb_queue_t queue;
 
+    thread_state_t *state = &tptr->tcbState;
+
     epptr = EP_PTR(thread_state_ptr_get_blockingObject(state));
 
     /* Haskell error "blockedIPCCancel: endpoint must not be idle" */
@@ -699,7 +701,7 @@ void setThreshold(endpoint_t * epptr, time_t threshold) {
 }
 
 
-void MoveAllHoldtoNormal(endpoint_t * epptr) {
+void moveAllHoldtoNormal(endpoint_t * epptr) {
     tcb_t * thread = (tcb_t *)endpoint_ptr_get_epHoldQueue_head(epptr);
     tcb_t * next;
     while(thread!=NULL) {
