@@ -159,11 +159,11 @@ static inline bool_t PURE isSchedulable(const tcb_t *thread)
            thread->tcbSchedContext != NULL &&
            thread->tcbSchedContext->scRefillMax > 0 &&
            !thread_state_get_tcbInReleaseQueue(thread->tcbState) 
-           #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
            &&
            !thread_state_get_tcbInHoldReleaseNextQueue(thread->tcbState) &&
            !thread_state_get_tcbInHoldReleaseHeadQueue(thread->tcbState)
-           #endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
+#endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
            ;
 }
 #else

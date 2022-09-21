@@ -662,7 +662,7 @@ void completeHoldEP(tcb_t *thread) {
 void setThreshold(endpoint_t * epptr, time_t threshold) {
         /* Set endpoint threshold */
         time_t old_threshold = endpoint_ptr_get_epThreshold(epptr);
-        endpoint_ptr_set_epThreshold(epptr,threshold);
+        // endpoint_ptr_set_epThreshold(epptr,threshold);
 
 
         /* Set the sc->threshold field of all associated threads SC's */

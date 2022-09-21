@@ -156,18 +156,18 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
     
 #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
     /* Check if the endpoint has a threshold on it */
-#ifdef CONFIG_KERNEL_IPCTHRESHOLDS_TESTING
-    time_t threshold = endpoint_ptr_get_epThreshold(ep_ptr);
-    if (unlikely(threshold!=0)) {
-        /* Compare the SC's budget to the threshold */
-        /* Comparison value is current thread's usage + threshold */
-        updateTimestamp();
-        if (unlikely(!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + threshold))) {
-            slowpath(SysCall);
-        }
+    // time_t threshold = endpoint_ptr_get_epThreshold(ep_ptr);
+    printf("Endpoint_PTR: %p   |Endpoint Threshold: %llu\n",ep_ptr, endpoint_ptr_get_epThreshold(ep_ptr));
+    printf("Endpoint_PTR: %p   |Endpoint Threshold: %llu\n",ep_ptr, endpoint_ptr_get_epThreshold(ep_ptr));
+    // if (unlikely(threshold!=0)) {
+    //     /* Compare the SC's budget to the threshold */
+    //     /* Comparison value is current thread's usage + threshold */
+    //     updateTimestamp();
+    //     if (unlikely(!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + threshold))) {
+    //         slowpath(SysCall);
+    //     }
 
-    }
-#endif
+    // }
 
 #endif
 

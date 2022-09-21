@@ -541,12 +541,21 @@ cap_t createObject(object_t t, void *regionBase, word_t userSize, bool_t deviceM
         tcbDebugAppend(tcb);
 #endif /* CONFIG_DEBUG_BUILD */
 
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+        thread_state_ptr_set_tcbInHoldReleaseNextQueue(&tcb->tcbState,0);
+        thread_state_ptr_set_tcbInHoldReleaseHeadQueue(&tcb->tcbState,0);
+#endif
+
         return cap_thread_cap_new(TCB_REF(tcb));
     }
 
     case seL4_EndpointObject:
         /** AUXUPD: "(True, ptr_retyp
           (Ptr (ptr_val \<acute>regionBase) :: endpoint_C ptr))" */
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+        memzero(regionBase, 1UL << seL4_EndpointBits);
+        // endpoint_ptr_set_epThreshold(regionBase,0);
+#endif
         return cap_endpoint_cap_new(0, true, true, true, true,
                                     EP_REF(regionBase));
 
@@ -669,7 +678,6 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
         }
 
         endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(cap));
-#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
 #ifdef CONFIG_KERNEL_IPCTHRESHOLDS_TESTING
         /* Check if a threshold exists on the endpoint */
         
@@ -724,7 +732,6 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
 
 
         }
-#endif
 #endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
 
         setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);

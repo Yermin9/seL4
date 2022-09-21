@@ -398,10 +398,8 @@ void schedule(void)
                 switchToThread(candidate);
             }
         }
+        
     }
-
-    NODE_STATE(ksSchedulerAction) = SchedulerAction_ResumeCurrentThread;
-
 #ifdef ENABLE_SMP_SUPPORT
     doMaskReschedule(ARCH_NODE_STATE(ipiReschedulePending));
     ARCH_NODE_STATE(ipiReschedulePending) = 0;
@@ -467,7 +465,7 @@ void switchToThread(tcb_t *thread)
 #endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
 
 
-#endif
+#endif /* CONFIG_KERNEL_MCS */
 
 #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
     benchmark_utilisation_switch(NODE_STATE(ksCurThread), thread);
@@ -480,6 +478,12 @@ void switchToThread(tcb_t *thread)
 
 void switchToIdleThread(void)
 {
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    // Set so we leave the scheduler loop
+    NODE_STATE(ksSchedulerAction) = SchedulerAction_ResumeCurrentThread;
+#endif
+
 #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
     benchmark_utilisation_switch(NODE_STATE(ksCurThread), NODE_STATE(ksIdleThread));
 #endif
@@ -723,7 +727,7 @@ void awaken(void)
         NODE_STATE(ksReprogram) = true;
     }
 
-    #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    #ifdef CONFIG_KERNEL_IPCTHRESHOLDS_TESTING
 
     /* Loop for ksHoldReleaseNextHead TODO */
     while (unlikely(NODE_STATE(ksHoldReleaseNextHead) != NULL && refill_second_ready(NODE_STATE(ksHoldReleaseNextHead)->tcbSchedContext))) {
@@ -760,7 +764,7 @@ void awaken(void)
     /* Loop for ksHoldReleaseHeadHead TODO */
     while (unlikely(NODE_STATE(ksHoldReleaseHeadHead) != NULL && refill_ready(NODE_STATE(ksHoldReleaseHeadHead)->tcbSchedContext))) {
        /* Remove the TCB */
-        tcb_t *awakened = tcbHoldReleaseNextDequeue();
+        tcb_t *awakened = tcbHoldReleaseHeadDequeue();
 
         /* Check if its exceeded its threshold */
         if (refill_sufficient(awakened->tcbSchedContext,awakened->tcbSchedContext->threshold)) {
