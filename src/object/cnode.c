@@ -34,7 +34,11 @@ static void emptySlot(cte_t *slot, cap_t cleanupInfo);
 static exception_t reduceZombie(cte_t *slot, bool_t exposed);
 
 #ifdef CONFIG_KERNEL_MCS
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+#define CNODE_LAST_INVOCATION EndpointSetThreshold
+#else
 #define CNODE_LAST_INVOCATION CNodeRotate
+#endif
 #else
 #define CNODE_LAST_INVOCATION CNodeSaveCaller
 #endif
@@ -202,6 +206,8 @@ exception_t decodeCNodeInvocation(word_t invLabel, word_t length, cap_t cap,
         return invokeCNodeDelete(destSlot);
     }
 
+
+
 #ifndef CONFIG_KERNEL_MCS
     if (invLabel == CNodeSaveCaller) {
         status = ensureEmptySlot(destSlot);
@@ -212,6 +218,50 @@ exception_t decodeCNodeInvocation(word_t invLabel, word_t length, cap_t cap,
 
         setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
         return invokeCNodeSaveCaller(destSlot);
+    }
+#endif
+
+#if (defined(CONFIG_KERNEL_MCS) && defined(CONFIG_KERNEL_IPCTHRESHOLDS))
+    if (invLabel == EndpointSetThreshold) {
+        // lu_ret should be the target.
+        /* TODO */
+
+
+        if (length < 3) {
+            userError("Endpoint Set Threshold: Truncated message.");
+            current_syscall_error.type = seL4_TruncatedMessage;
+            return EXCEPTION_SYSCALL_ERROR;
+        }
+        word_t threshold = getSyscallArg(2, buffer);
+
+
+        if(cap_get_capType(destSlot->cap)!=cap_endpoint_cap) {
+            current_syscall_error.type = seL4_IllegalOperation;
+            return EXCEPTION_SYSCALL_ERROR;
+        }
+        
+        // Check if original cap
+
+        if(cap_endpoint_cap_get_capEPBadge(destSlot->cap)!=0) {
+            /* A badged cap cannot be the original endpoint capability */
+            current_syscall_error.type = seL4_InvalidCapability;
+            current_syscall_error.invalidCapNumber = 0;
+            return EXCEPTION_SYSCALL_ERROR;
+        }
+
+        // For the MCS kernel, checking this is equivalent to whether its an original capability
+        if(!mdb_node_get_mdbRevocable(destSlot->cteMDBNode)) {
+            /* Not original cap */
+            current_syscall_error.type = seL4_InvalidCapability;
+            current_syscall_error.invalidCapNumber = 0;
+            return EXCEPTION_SYSCALL_ERROR;
+        }
+        
+        endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(cap));
+        setThreshold(ep_ptr, threshold);
+
+        return EXCEPTION_NONE;
+
     }
 #endif
 

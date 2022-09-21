@@ -25,6 +25,37 @@ void sendIPC(bool_t blocking, bool_t do_call, word_t badge,
              endpoint_t *epptr);
 void receiveIPC(tcb_t *thread, cap_t cap, bool_t isBlocking, cap_t replyCPtr);
 void reorderEP(endpoint_t *epptr, tcb_t *thread);
+
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+/* Associates a thread in the IPC_Hold state (insufficient budget) with the endpoint */
+void addHoldEP(endpoint_t * epptr, tcb_t *thread);
+
+/* Removes from the Held IPC queue */
+void removeHoldEP(tcb_t *thread);
+
+/* Completes the Held IPC operation. To be called when the thread has sufficient budget */
+void completeHoldEP(tcb_t *thread);
+
+
+void setThreshold(endpoint_t * epptr, time_t threshold);
+
+
+
+/* If the endpoint threshold was decreased, potentially some held threads will now have enough budget */
+void maybeMoveHoldtoNormal(endpoint_t * epptr);
+
+void moveAllHoldtoNormal(endpoint_t * epptr);
+
+/* If the threshold was increase,d potentially some threads in the normal queue won't have enough budget anymore */
+void maybeMoveNormaltoHold(endpoint_t * epptr);
+
+
+/* Removes a thread from the normal ipc queue, in preparation for entering the IPC Hold queue */
+void removeIPC(tcb_t *tptr);
+
+#endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
+
 #else
 void sendIPC(bool_t blocking, bool_t do_call, word_t badge,
              bool_t canGrant, bool_t canGrantReply, tcb_t *thread,

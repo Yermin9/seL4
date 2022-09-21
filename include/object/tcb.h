@@ -53,7 +53,23 @@ void tcbDebugRemove(tcb_t *tcb);
 void tcbReleaseRemove(tcb_t *tcb);
 void tcbReleaseEnqueue(tcb_t *tcb);
 tcb_t *tcbReleaseDequeue(void);
-#endif
+
+
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+/* These functions relate to the queues required for the IPC_Hold state 
+ReleaseHead is ordered by the release time of the SC's head refill
+ReleaseNext is ordered by the release time of the SC's next refill(after head) */
+void tcbHoldReleaseHeadRemove(tcb_t *tcb);
+void tcbHoldReleaseHeadEnqueue(tcb_t *tcb);
+tcb_t *tcbHoldReleaseHeadDequeue(void);
+
+void tcbHoldReleaseNextRemove(tcb_t *tcb);
+void tcbHoldReleaseNextEnqueue(tcb_t *tcb);
+tcb_t *tcbHoldReleaseNextDequeue(void);
+
+#endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
+#endif /* CONFIG_KERNEL_MCS */
 
 #ifdef ENABLE_SMP_SUPPORT
 void remoteQueueUpdate(tcb_t *tcb);

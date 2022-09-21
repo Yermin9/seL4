@@ -67,7 +67,7 @@ deriveCap_ret_t deriveCap(cte_t *slot, cap_t cap)
         return Arch_deriveCap(slot, cap);
     }
 
-    switch (cap_get_capType(cap)) {
+    switch (cap_get_capType(cap)) { 
     case cap_zombie_cap:
         ret.status = EXCEPTION_NONE;
         ret.cap = cap_null_cap_new();
@@ -668,16 +668,75 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
             return EXCEPTION_SYSCALL_ERROR;
         }
 
+        endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(cap));
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS_TESTING
+        /* Check if a threshold exists on the endpoint */
+        
+        if (unlikely(endpoint_ptr_get_epThreshold(ep_ptr)!=0)) {
+            if (unlikely(!canDonate)) {
+                /* Only invocations that can donate are permitted to use a thresholded endpoint*/
+                current_syscall_error.type = seL4_IllegalOperation;
+                return EXCEPTION_SYSCALL_ERROR;
+            }
+
+            /* Check available budget against threshold */
+            if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + endpoint_ptr_get_epThreshold(ep_ptr))) {
+                /* If we can't block, send fails silently, we don't enter IPC_Hold state. */
+                if (!block) {
+                    return EXCEPTION_NONE;
+                }
+
+                // TODO
+                // Charge thread for usage
+                // Handle roundrobin specially??
+
+                /* We charge usage here, because the IPC_Hold queues assume threads have all available budget merged into head refill   */
+                /* Call refill_unblock_check to merge all released replenishments into the head */
+                refill_unblock_check(NODE_STATE(ksCurThread)->tcbSchedContext);
+
+                /* Save the Cptr */
+                NODE_STATE(ksCurThread)->holdCptr = capIndex;
+
+                // Enqueue onto relevant IPC_Hold queue
+                if (refill_ready(NODE_STATE(ksCurThread)->tcbSchedContext)) {
+                    /* Head refill is released */
+                    tcbHoldReleaseHeadEnqueue(NODE_STATE(ksCurThread));
+                } else {
+                    /* Head refill not released */
+                    tcbHoldReleaseNextEnqueue(NODE_STATE(ksCurThread));
+                }
+                
+                /* Set thread state */
+                setThreadState(NODE_STATE(ksCurThread), ThreadState_BlockedOn_IPC_Hold);
+
+                /* Enqueue onto endpoint hold queue */
+                addHoldEP(ep_ptr, NODE_STATE(ksCurThread));
+
+                
+
+                /* Set reschedule required */
+                NODE_STATE(ksSchedulerAction) = SchedulerAction_ChooseNewThread;
+                
+                return EXCEPTION_NONE;
+            }
+
+
+
+        }
+#endif
+#endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
+
         setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
 #ifdef CONFIG_KERNEL_MCS
         return performInvocation_Endpoint(
-                   EP_PTR(cap_endpoint_cap_get_capEPPtr(cap)),
+                   ep_ptr,
                    cap_endpoint_cap_get_capEPBadge(cap),
                    cap_endpoint_cap_get_capCanGrant(cap),
                    cap_endpoint_cap_get_capCanGrantReply(cap), block, call, canDonate);
 #else
         return performInvocation_Endpoint(
-                   EP_PTR(cap_endpoint_cap_get_capEPPtr(cap)),
+                   ep_ptr,
                    cap_endpoint_cap_get_capEPBadge(cap),
                    cap_endpoint_cap_get_capCanGrant(cap),
                    cap_endpoint_cap_get_capCanGrantReply(cap), block, call);

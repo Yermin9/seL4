@@ -28,6 +28,10 @@ compile_assert(ksReadyQueuesL1BitmapBigEnough, (L2_BITMAP_SIZE - 1) <= wordBits)
 #ifdef CONFIG_KERNEL_MCS
 /* Head of the queue of threads waiting for their budget to be replenished */
 UP_STATE_DEFINE(tcb_t *, ksReleaseHead);
+
+/* Queues for tracking threads held on endpoints due to insufficient budget */
+UP_STATE_DEFINE(tcb_t *, ksHoldReleaseHeadHead);
+UP_STATE_DEFINE(tcb_t *, ksHoldReleaseNextHead);
 #endif
 
 /* Current thread TCB pointer */

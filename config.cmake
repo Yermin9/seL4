@@ -525,6 +525,15 @@ config_string(
 )
 
 config_string(
+    KernelIpcThresholds KERNEL_IPCTHRESHOLDS
+    "Enables thresholds on IPC Endpoints"
+    DEFAULT 1
+    UNQUOTE
+    DEPENDS "KernelIsMCS" UNDEF_DISABLED
+    DEPENDS "KernelIpcThresholds" UNDEF_DISABLED
+)
+
+config_string(
     KernelStaticMaxPeriodUs KERNEL_STATIC_MAX_PERIOD_US
     "Specifies a static maximum to which scheduling context can have \
     either its period or budget configured."

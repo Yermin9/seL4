@@ -65,11 +65,22 @@ NODE_STATE_DECLARE(tcb_t, *ksSchedulerAction);
 
 #ifdef CONFIG_KERNEL_MCS
 NODE_STATE_DECLARE(tcb_t, *ksReleaseHead);
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+/* Two queues for tracking threads in the IPC_Hold state
+HeadHead is ordered by the associated SC's head refill
+NextHead is ordered by the associated SC's second refill(after the head)
+*/
+NODE_STATE_DECLARE(tcb_t, *ksHoldReleaseHeadHead); 
+NODE_STATE_DECLARE(tcb_t, *ksHoldReleaseNextHead);
+#endif
 NODE_STATE_DECLARE(time_t, ksConsumed);
 NODE_STATE_DECLARE(time_t, ksCurTime);
 NODE_STATE_DECLARE(bool_t, ksReprogram);
 NODE_STATE_DECLARE(sched_context_t, *ksCurSC);
 NODE_STATE_DECLARE(sched_context_t, *ksIdleSC);
+
+
 #endif
 
 #ifdef CONFIG_HAVE_FPU

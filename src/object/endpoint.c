@@ -249,6 +249,13 @@ void receiveIPC(tcb_t *thread, cap_t cap, bool_t isBlocking)
                 }
             }
 
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+            /* Set SC threshold to zero as IPC is complete */
+            if (sender->tcbSchedContext != NULL) {
+               sender->tcbSchedContext->threshold=0;
+            }
+#endif
+
             if (do_call ||
                 seL4_Fault_get_seL4_FaultType(sender->tcbFault) != seL4_Fault_NullFault) {
                 if ((canGrant || canGrantReply) && replyPtr != NULL) {
@@ -309,6 +316,45 @@ void replyFromKernel_success_empty(tcb_t *thread)
                     seL4_MessageInfo_new(0, 0, 0, 0)));
 }
 
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+void removeIPC(tcb_t *tptr) {
+    assert(thread_state_ptr_get_tsType(&tptr->tcbState)==ThreadState_BlockedOnSend);
+
+    endpoint_t *epptr;
+    tcb_queue_t queue;
+
+    thread_state_t *state = &tptr->tcbState;
+
+    epptr = EP_PTR(thread_state_ptr_get_blockingObject(state));
+
+    /* Haskell error "blockedIPCCancel: endpoint must not be idle" */
+    assert(endpoint_ptr_get_state(epptr) != EPState_Idle);
+
+    /* Dequeue TCB */
+    queue = ep_ptr_get_queue(epptr);
+    queue = tcbEPDequeue(tptr, queue);
+    ep_ptr_set_queue(epptr, queue);
+
+    if (!queue.head) {
+        endpoint_ptr_set_state(epptr, EPState_Idle);
+    }
+
+#ifdef CONFIG_KERNEL_MCS
+    reply_t *reply = REPLY_PTR(thread_state_get_replyObject(tptr->tcbState));
+    if (reply != NULL) {
+        reply_unlink(reply, tptr);
+    }
+#endif
+    setThreadState(tptr, ThreadState_Inactive);
+
+}
+
+#endif
+
+
+
+
 void cancelIPC(tcb_t *tptr)
 {
     thread_state_t *state = &tptr->tcbState;
@@ -349,6 +395,12 @@ void cancelIPC(tcb_t *tptr)
         break;
     }
 
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    case ThreadState_BlockedOn_IPC_Hold:
+        removeHoldEP(tptr);
+        break;
+#endif
+
     case ThreadState_BlockedOnNotification:
         cancelSignal(tptr,
                      NTFN_PTR(thread_state_ptr_get_blockingObject(state)));
@@ -380,12 +432,42 @@ void cancelIPC(tcb_t *tptr)
 
 void cancelAllIPC(endpoint_t *epptr)
 {
+    tcb_t *thread;
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    thread = TCB_PTR(endpoint_ptr_get_epHoldQueue_head(epptr));
+    while(thread!=NULL) {
+        reply_t *reply = REPLY_PTR(thread_state_get_replyObject(thread->tcbState));
+        if (reply != NULL) {
+            reply_unlink(reply, thread);
+        }
+        if (seL4_Fault_get_seL4_FaultType(thread->tcbFault) == seL4_Fault_NullFault) {
+            setThreadState(thread, ThreadState_Restart);
+            if (sc_sporadic(thread->tcbSchedContext)) {
+                /* We know that the thread can't have the current SC
+                    * as its own SC as this point as it should still be
+                    * associated with the current thread, or no thread.
+                    * This check is added here to reduce the cost of
+                    * proving this to be true as a short-term stop-gap. */
+                assert(thread->tcbSchedContext != NODE_STATE(ksCurSC));
+                if (thread->tcbSchedContext != NODE_STATE(ksCurSC)) {
+                    refill_unblock_check(thread->tcbSchedContext);
+                }
+            }
+            possibleSwitchTo(thread);
+        } else {
+            setThreadState(thread, ThreadState_Inactive);
+        }
+        thread=thread->tcbEPNext;
+    }
+    rescheduleRequired();
+#endif
+
     switch (endpoint_ptr_get_state(epptr)) {
     case EPState_Idle:
         break;
 
     default: {
-        tcb_t *thread = TCB_PTR(endpoint_ptr_get_epQueue_head(epptr));
+        thread = TCB_PTR(endpoint_ptr_get_epQueue_head(epptr));
 
         /* Make endpoint idle */
         endpoint_ptr_set_state(epptr, EPState_Idle);
@@ -506,4 +588,170 @@ void reorderEP(endpoint_t *epptr, tcb_t *thread)
     queue = tcbEPAppend(thread, queue);
     ep_ptr_set_queue(epptr, queue);
 }
-#endif
+
+ 
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+
+void addHoldEP(endpoint_t * epptr, tcb_t *thread) {
+    /* TCB should not currently be in an endpoint queue */
+    assert(thread->tcbEPNext==NULL && thread->tcbEPPrev==NULL);
+
+    assert(thread->holdEP==NULL);
+
+    tcb_t * head = (tcb_t *)endpoint_ptr_get_epHoldQueue_head(epptr);
+
+
+    /* This queue has no specified order, so just insert new TCB at the head */
+
+    thread->tcbEPNext = head;
+    if (thread->tcbEPNext != NULL) {
+        thread->tcbEPNext->tcbEPPrev=thread;
+    }
+
+    thread->holdEP = epptr;
+
+    endpoint_ptr_set_epHoldQueue_head(epptr,(word_t)thread);
+
+    setThreadState(thread, ThreadState_BlockedOn_IPC_Hold);
+}
+
+void removeHoldEP(tcb_t *thread) {
+    /* Just remove from queue */
+    assert(thread->holdEP!=NULL);
+
+    if (thread->tcbEPPrev==NULL) {
+        /* This TCB is head of queue */
+        endpoint_ptr_set_epHoldQueue_head(thread->holdEP,(word_t)thread->tcbEPNext);
+    } else {
+        if (thread->tcbEPNext==NULL) {
+            /* Tail of queue */
+            thread->tcbEPPrev->tcbEPNext=NULL;
+        } else {
+            thread->tcbEPNext->tcbEPPrev = thread->tcbEPPrev;
+            thread->tcbEPPrev->tcbEPNext = thread->tcbEPNext;
+        }
+    }
+
+    thread->tcbEPNext=NULL;
+    thread->tcbEPPrev=NULL;
+    thread->holdEP = NULL;
+}
+
+void completeHoldEP(tcb_t *thread) {
+    removeHoldEP(thread);
+
+    /* To reach an IPC Hold state, the original invocation must
+     * have been blocking, be seL4_Call and be able to donate
+     * Therefore we can assume all these properties when calling sendIPC*/
+
+
+    /* This should never fail. The cap was valid when we originally entered the IPC Hold state 
+     * and any change that made it invalid (revocation etc), should have removed the tcb from the IPC Hold state*/
+    lookupCapAndSlot_ret_t lu_ret = lookupCapAndSlot(thread, thread->holdCptr);
+
+    assert(lu_ret.status != EXCEPTION_NONE);
+
+
+    sendIPC(true,true,cap_endpoint_cap_get_capEPBadge(lu_ret.cap),
+                   cap_endpoint_cap_get_capCanGrant(lu_ret.cap),
+                   cap_endpoint_cap_get_capCanGrantReply(lu_ret.cap),
+                   true,thread,EP_PTR(cap_endpoint_cap_get_capEPPtr(lu_ret.cap)));
+}
+
+
+void setThreshold(endpoint_t * epptr, time_t threshold) {
+        /* Set endpoint threshold */
+        time_t old_threshold = endpoint_ptr_get_epThreshold(epptr);
+        endpoint_ptr_set_epThreshold(epptr,threshold);
+
+
+        /* Set the sc->threshold field of all associated threads SC's */
+        tcb_t *thread = TCB_PTR(endpoint_ptr_get_epQueue_head(epptr));
+        for (; thread; thread = thread->tcbEPNext) {
+            if (thread->tcbSchedContext) {
+                thread->tcbSchedContext->threshold = threshold;
+            }
+        }
+
+        /* Set the sc threshold for TCB's in the hold queue as well */
+        thread = (tcb_t *)endpoint_ptr_get_epHoldQueue_head(epptr);
+        for (; thread; thread = thread->tcbEPNext) {
+            if (thread->tcbSchedContext) {
+                thread->tcbSchedContext->threshold = threshold;
+            }
+        }
+
+        if (threshold!=0) {
+            /* Don't need to do anything where old==new */
+            if (old_threshold>threshold) {
+                /* might need to move some threads from normal IPC queue to hold queue*/
+                maybeMoveNormaltoHold(epptr);
+            } else {
+                /* Might need to move some threads from hold queue to ipc queue */
+                maybeMoveHoldtoNormal(epptr);
+            }
+        } else {
+            /* In the specific case where the new threshold is zero, we move all held threads to the normal queue */
+            moveAllHoldtoNormal(epptr);
+        }
+
+
+
+
+}
+
+
+void moveAllHoldtoNormal(endpoint_t * epptr) {
+    tcb_t * thread = (tcb_t *)endpoint_ptr_get_epHoldQueue_head(epptr);
+    tcb_t * next;
+    while(thread!=NULL) {
+        next = thread->tcbEPNext;
+        completeHoldEP(thread);
+        thread=next;
+    }
+}
+
+
+void maybeMoveHoldtoNormal(endpoint_t * epptr) {
+    tcb_t * thread = (tcb_t *)endpoint_ptr_get_epHoldQueue_head(epptr);
+    tcb_t * next;
+    while(thread!=NULL) {
+        next = thread->tcbEPNext;
+        if (thread->tcbSchedContext && refill_sufficient(thread->tcbSchedContext,thread->tcbSchedContext->threshold)) {
+            completeHoldEP(thread);
+        }
+        thread=next;
+    }
+}
+
+void maybeMoveNormaltoHold(endpoint_t * epptr) {
+
+
+    tcb_queue_t queue = ep_ptr_get_queue(epptr);
+    tcb_t * thread = queue.head;
+    tcb_t * next;
+
+
+    for (;thread; thread = next) {
+        next = thread->tcbEPNext;
+        if (!refill_sufficient(thread->tcbSchedContext,thread->tcbSchedContext->threshold)) {
+            thread_state_ptr_set_tsType(&thread->tcbState,
+                            ThreadState_BlockedOn_IPC_Hold);
+        }
+        tcbEPDequeue(thread, queue);
+        addHoldEP(epptr, thread);
+    }
+
+    ep_ptr_set_queue(epptr, queue);
+
+    if (!queue.head) {
+        endpoint_ptr_set_state(epptr, EPState_Idle);
+    }
+
+}
+
+
+
+#endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
+
+#endif /* CONFIG_KERNEL_MCS */

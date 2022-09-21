@@ -31,11 +31,7 @@
  * the fpu or implementing divide.
  */
 
-/* return the index of the next item in the refill queue */
-static inline word_t refill_next(sched_context_t *sc, word_t index)
-{
-    return (index == sc->scRefillMax - 1u) ? (0) : index + 1u;
-}
+
 
 #ifdef CONFIG_PRINTING
 /* for debugging */
@@ -341,3 +337,43 @@ void refill_unblock_check(sched_context_t *sc)
     }
     REFILL_SANITY_END(sc);
 }
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+
+bool_t budget_sufficient_merge(sched_context_t *sc) {
+    /* SC should have at least two refills */
+    assert(!refill_single(sc));
+    /* This function should only be called when both head and second refill are released */
+    assert(refill_ready(sc));
+    assert(refill_second_ready(sc));
+
+    /* This behaviour should only be triggered if the threshold is non-zero */
+    assert(sc->threshold!=0);
+
+
+    /* Sum the head and second and merge */
+    /* We don't need to change the new head's release time, as it will be changed when the thread is actually run */
+    /* So there is no point changing it now. */
+    refill_t old_head = refill_pop_head(sc);
+    refill_head(sc)->rAmount += old_head.rAmount;
+
+    return refill_sufficient(sc, sc->threshold);
+}
+
+
+
+bool_t available_budget_check(sched_context_t *sc, ticks_t threshold) {
+    word_t cur_refill_index = sc->scRefillHead + 1;
+    ticks_t available_budget = refill_head(sc)->rAmount;
+    ticks_t required_budget = threshold + 2*getKernelWcetTicks();
+
+    while (unlikely((available_budget < required_budget) && refill_index(sc, cur_refill_index)->rTime <= NODE_STATE(ksCurTime) && cur_refill_index != sc->scRefillTail)) {
+        available_budget += refill_index(sc, cur_refill_index)->rAmount;
+        cur_refill_index = cur_refill_index + 1;
+    }
+
+    return (available_budget >= required_budget);
+}
+
+#endif
+

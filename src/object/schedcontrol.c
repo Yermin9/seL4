@@ -24,8 +24,22 @@ static exception_t invokeSchedControl_ConfigureFlags(sched_context_t *target, wo
         /* remove from scheduler */
         tcbReleaseRemove(target->scTcb);
         tcbSchedDequeue(target->scTcb);
-        /* bill the current consumed amount before adjusting the params */
+
+        #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+        /* Check if the associated thread was held on an endpoint threshold */
+        
+        /* Check if thread was held in either IPC hold queue */
+        if (thread_state_get_tcbInHoldReleaseHeadQueue(target->scTcb->tcbState)) {
+            tcbHoldReleaseHeadRemove(target->scTcb);
+        } else if (thread_state_get_tcbInHoldReleaseNextQueue(target->scTcb->tcbState)) { 
+            tcbHoldReleaseNextRemove(target->scTcb);
+        } else if (NODE_STATE(ksCurSC) == target) {
+            /* An SC attached to a  thread in the IPC Hold state cannot have been the current SC */
+        #else
         if (NODE_STATE(ksCurSC) == target) {
+        #endif
+            
+
             /* This could potentially mutate state but if it returns
              * true no state was modified, thus removing it should
              * be the same. */
@@ -60,17 +74,67 @@ static exception_t invokeSchedControl_ConfigureFlags(sched_context_t *target, wo
 
     assert(target->scRefillMax > 0);
     if (target->scTcb) {
-        schedContext_resume(target);
-        if (SMP_TERNARY(core == CURRENT_CPU_INDEX(), true)) {
-            if (isRunnable(target->scTcb) && target->scTcb != NODE_STATE(ksCurThread)) {
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+        if (thread_state_get_tsType(target->scTcb->tcbState)==ThreadState_BlockedOn_IPC_Hold) {
+            if (!refill_ready(target)) {
+                /* Insert into threshold queue waiting for head */
+                tcbHoldReleaseHeadEnqueue(target->scTcb);
+            } else if (refill_sufficient(target, target->threshold)) {
+                /* Budget is sufficient so insert into scheduler */
                 possibleSwitchTo(target->scTcb);
+            } else if (!refill_single(target)) {
+                /* Wait for release of next refill */
+                tcbHoldReleaseNextEnqueue(target->scTcb);
             }
-        } else if (isRunnable(target->scTcb)) {
-            SCHED_ENQUEUE(target->scTcb);
+#ifdef CONFIG_DEBUG_BUILD
+            /* If no cases trigger thread has insufficient budget to clear threshold and has no pending refills*/
+            /* In a debug build, warn user about stuck thread */
+            else {
+                printf("Thread stuck on endpoint threshold due to insufficient budget %p \"%s\"\n", target->scTcb, TCB_PTR_DEBUG_PTR(target->scTcb)->tcbName);
+            }
+#endif /* CONFIG_DEBUG_BUILD */
+            
+
+        } else if (thread_state_get_tsType(target->scTcb->tcbState)==ThreadState_BlockedOnSend &&
+            target->threshold!=0 && !refill_sufficient(target, target->threshold)) {
+            /* The thread was previously in a thresholded endpoint, but had its budget reduced,
+             * and now no longer has enough budget to clear the threshold */
+
+            endpoint_t * epptr = EP_PTR(thread_state_get_blockingObject(target->scTcb->tcbState));
+
+            /* Remove from normal IPC queue */
+            removeIPC(target->scTcb);
+
+
+            /* Insert into IPC Hold queue */
+            addHoldEP(epptr, target->scTcb);
+
+            /* Insert into appropriate IPC Release Hold queue */
+            if (!refill_ready(target)) {
+                /* Insert into threshold queue waiting for head */
+                tcbHoldReleaseHeadEnqueue(target->scTcb);
+            } else if (!refill_single(target)) {
+                /* Wait for release of next refill */
+                tcbHoldReleaseNextEnqueue(target->scTcb);
+            }
+
+            
+        } else {
+#endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
+            schedContext_resume(target);
+            if (SMP_TERNARY(core == CURRENT_CPU_INDEX(), true)) {
+                if (isRunnable(target->scTcb) && target->scTcb != NODE_STATE(ksCurThread)) {
+                    possibleSwitchTo(target->scTcb);
+                }
+            } else if (isRunnable(target->scTcb)) {
+                SCHED_ENQUEUE(target->scTcb);
+            }
+            if (target->scTcb == NODE_STATE(ksCurThread)) {
+                rescheduleRequired();
+            }
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
         }
-        if (target->scTcb == NODE_STATE(ksCurThread)) {
-            rescheduleRequired();
-        }
+#endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
     }
 
     return EXCEPTION_NONE;

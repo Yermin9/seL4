@@ -200,9 +200,16 @@ block sched_control_cap {
 
 ---- Arch-independent object types
 
--- Endpoint: size = 16 bytes
+-- Endpoint: size = 16 bytes (32 bytes on mcs with endpoint thresholds)
 block endpoint {
     field epQueue_head 64
+#ifdef CONFIG_KERNEL_MCS
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    field epHoldQueue_head 64
+    field epThreshold 64
+#endif
+#endif
+
 
 #if BF_CANONICAL_RANGE == 48
     padding 16
@@ -427,7 +434,11 @@ block thread_state(blockingIPCBadge, blockingIPCCanGrant,
                    blockingIPCCanGrantReply, blockingIPCIsCall,
 #ifdef CONFIG_KERNEL_MCS
                    tcbQueued, tsType,
-                   tcbInReleaseQueue, blockingObject, replyObject) {
+                   tcbInReleaseQueue, 
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS                
+                   tcbInHoldReleaseHeadQueue, tcbInHoldReleaseNextQueue,
+#endif
+                   blockingObject, replyObject) {
 #else
                    tcbQueued, blockingObject,
                    tsType) {
@@ -436,10 +447,10 @@ block thread_state(blockingIPCBadge, blockingIPCCanGrant,
 
 #ifdef CONFIG_KERNEL_MCS
 #if BF_CANONICAL_RANGE == 48
-    padding 15
+    padding 13
     field_high replyObject 44
 #elif BF_CANONICAL_RANGE == 39
-    padding 24
+    padding 22
     field_high replyObject 35
 #else
 #error "Unspecified canonical address range"
@@ -453,6 +464,12 @@ block thread_state(blockingIPCBadge, blockingIPCCanGrant,
     field tcbQueued 1
 #ifdef CONFIG_KERNEL_MCS
     field tcbInReleaseQueue 1
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS        
+    field tcbInHoldReleaseHeadQueue 1
+    field tcbInHoldReleaseNextQueue 1
+#else
+    padding 2
+#endif    
 #endif
 
 #if BF_CANONICAL_RANGE == 48

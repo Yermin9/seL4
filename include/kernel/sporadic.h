@@ -53,6 +53,13 @@ static inline refill_t *refill_index(sched_context_t *sc, word_t index)
 {
     return ((refill_t *)(SC_REF(sc) + sizeof(sched_context_t))) + index;
 }
+
+/* return the index of the next item in the refill queue */
+static inline word_t refill_next(sched_context_t *sc, word_t index)
+{
+    return (index == sc->scRefillMax - 1u) ? (0) : index + 1u;
+}
+
 static inline refill_t *refill_head(sched_context_t *sc)
 {
     return refill_index(sc, sc->scRefillHead);
@@ -60,6 +67,12 @@ static inline refill_t *refill_head(sched_context_t *sc)
 static inline refill_t *refill_tail(sched_context_t *sc)
 {
     return refill_index(sc, sc->scRefillTail);
+}
+
+/* Gets the next refill after the head. */
+static inline refill_t *refill_second(sched_context_t *sc)
+{
+    return refill_index(sc, refill_next(sc, sc->scRefillHead));
 }
 
 
@@ -126,6 +139,13 @@ static inline bool_t refill_sufficient(sched_context_t *sc, ticks_t usage)
 static inline bool_t refill_ready(sched_context_t *sc)
 {
     return refill_head(sc)->rTime <= (NODE_STATE_ON_CORE(ksCurTime, sc->scCore) + getKernelWcetTicks());
+}
+
+/* Return true if the second refill is ready to be used. 
+ * Primarly for the ksHoldReleaseNextHead waiting queue */
+static inline bool_t refill_second_ready(sched_context_t *sc)
+{
+    return refill_second(sc)->rTime <= (NODE_STATE_ON_CORE(ksCurTime, sc->scCore) + getKernelWcetTicks());
 }
 
 /*
@@ -200,3 +220,21 @@ void refill_budget_check(ticks_t used);
  */
 void refill_unblock_check(sched_context_t *sc);
 
+
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+/* Primarly used for the IPC_Hold queues
+ * Merges the first and second refills together
+ * Should only be called on a blocked thread, and the second refill should be released
+ * Returns True if the new merged head refill exceeds the threshold_field of the SC */
+
+bool_t budget_sufficient_merge(sched_context_t *sc);
+
+/* Checks if the SC has enough released budget (possibly across multiple refills)
+ * to exceed threshold 
+ * TODO, add a 'merge' flag to indicate that if the budget is insufficient, refills should be merged together
+ *  */
+
+bool_t available_budget_check(sched_context_t *sc, ticks_t threshold);
+
+#endif

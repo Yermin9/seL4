@@ -1191,6 +1191,40 @@
                 </description>
             </error>
         </method>
+        <method id="EndpointSetThreshold" name="Endpoint_SetThreshold" manual_name="Endpoint Set Threshold" manual_label="cnode__endpoint_setThreshold">
+            <condition><and><config var="CONFIG_KERNEL_MCS"/><config var="CONFIG_KERNEL_IPCTHRESHOLDS"/></and></condition>
+            <brief>
+                Sets the threshold value of an endpoint. Only valid on the original endpoint capability
+            </brief>
+            <description>
+                <docref>See section TODO.</docref>
+            </description>
+            <cap_param append_description="CPTR to the CNode at the root of the CSpace where the endpoint capability resides. Must be at a depth equivalent to the wordsize."/>
+            <param dir="in" name="index" type="seL4_Word" description="CPTR to the slot where the endpoint capability resides. Resolved from the root of the _service parameter."/>
+            <param dir="in" name="depth" type="seL4_Uint8" description="Number of bits of index to resolve to find the slot being targeted."/>
+            <param dir="in" name="threshold" type="seL4_Time" description="Value of the threshold to set."/>
+            <error name="seL4_FailedLookup">
+                <description>
+                    The <texttt text="index"/> or <texttt text="depth"/> is invalid <docref>(see <autoref label="s:cspace-addressing"/>)</docref>.
+                </description>
+            </error>
+            <error name="seL4_IllegalOperation">
+                <description>
+                    The <texttt text="_service"/> is a CPtr to a capability of the wrong type.
+                </description>
+            </error>
+            <error name="seL4_InvalidCapability">
+                <description>
+                    The <texttt text="_service"/> is an endpoint CPtr, but is not the original capability.
+                </description>
+            </error>
+            <error name="seL4_RangeError">
+                <description>
+                    The <texttt text="depth"/> is invalid <docref>(see <autoref label="s:cspace-addressing"/>)</docref>.
+                </description>
+            </error>
+        </method>
+
 
     </interface>
 
@@ -1522,5 +1556,4 @@
             </error>
         </method>
     </interface>
-
 </api>
