@@ -156,6 +156,7 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
     
 #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
     /* Check if the endpoint has a threshold on it */
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS_TESTING
     time_t threshold = endpoint_ptr_get_epThreshold(ep_ptr);
     if (unlikely(threshold!=0)) {
         /* Compare the SC's budget to the threshold */
@@ -166,6 +167,8 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
         }
 
     }
+#endif
+
 #endif
 
     reply_t *reply = thread_state_get_replyObject_np(dest->tcbState);

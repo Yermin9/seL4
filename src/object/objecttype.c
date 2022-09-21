@@ -670,7 +670,7 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
 
         endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(cap));
 #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
-        
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS_TESTING
         /* Check if a threshold exists on the endpoint */
         
         if (unlikely(endpoint_ptr_get_epThreshold(ep_ptr)!=0)) {
@@ -724,6 +724,7 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
 
 
         }
+#endif
 #endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
 
         setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
