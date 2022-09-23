@@ -57,6 +57,7 @@ UP_STATE_DEFINE(ticks_t, ksCurTime);
 /* current scheduling context pointer */
 UP_STATE_DEFINE(sched_context_t *, ksCurSC);
 UP_STATE_DEFINE(sched_context_t *, ksIdleSC);
+UP_STATE_DEFINE(sched_context_t *, ksChargeSC);
 #endif
 
 #ifdef CONFIG_DEBUG_BUILD

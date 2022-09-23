@@ -40,6 +40,8 @@ if(KernelPlatformImx8mq-evk OR KernelPlatformImx8mm-evk)
         CLK_MAGIC 1llu
         CLK_SHIFT 3u
         KERNEL_WCET 10u
+        KERNEL_ENTRY_WCET 2u
+        KERNEL_EXIT_WCET 2u
     )
 endif()
 

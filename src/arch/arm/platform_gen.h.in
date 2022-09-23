@@ -42,4 +42,14 @@ static inline CONST time_t getKernelWcetUs(void)
 {
     return @CONFIGURE_KERNEL_WCET@;
 }
+
+static inline CONST time_t getKernelEntryWcetUs(void)
+{
+    return @CONFIGURE_KERNEL_ENTRY_WCET@;
+}
+
+static inline CONST time_t getKernelExitWcetUs(void)
+{
+    return @CONFIGURE_KERNEL_EXIT_WCET@;
+}
 #endif

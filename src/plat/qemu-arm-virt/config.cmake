@@ -123,6 +123,8 @@ if(KernelPlatformQEMUArmVirt)
         CLK_MAGIC 4611686019llu
         CLK_SHIFT 58u
         KERNEL_WCET 10u
+        KERNEL_ENTRY_WCET 0u
+        KERNEL_EXIT_WCET 0u
     )
 endif()
 

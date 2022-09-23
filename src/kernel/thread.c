@@ -318,26 +318,60 @@ static void nextDomain(void)
 }
 
 #ifdef CONFIG_KERNEL_MCS
+
 static void switchSchedContext(void)
 {
-    if (unlikely(NODE_STATE(ksCurSC) != NODE_STATE(ksCurThread)->tcbSchedContext)) {
-        NODE_STATE(ksReprogram) = true;
-        if (sc_constant_bandwidth(NODE_STATE(ksCurThread)->tcbSchedContext)) {
-            refill_unblock_check(NODE_STATE(ksCurThread)->tcbSchedContext);
-        }
+    sched_context_t *entry_sc = NODE_STATE(ksCurSC);
+    sched_context_t *exit_sc = NODE_STATE(ksCurThread)->tcbSchedContext;
+    sched_context_t *charge_sc = NODE_STATE(ksChargeSC);
 
-        assert(refill_ready(NODE_STATE(ksCurThread)->tcbSchedContext));
-        assert(refill_sufficient(NODE_STATE(ksCurThread)->tcbSchedContext, 0));
+    if (unlikely(entry_sc != exit_sc || charge_sc != exit_sc) && entry_sc->scRefillMax) {
+        NODE_STATE(ksReprogram) = true;
+        if (sc_constant_bandwidth(exit_sc)) {
+            refill_unblock_check(exit_sc);
+        }
+        assert(refill_ready(exit_sc));
+        assert(refill_sufficient(exit_sc, 0));
+  
     }
 
     if (NODE_STATE(ksReprogram)) {
-        /* if we are reprogamming, we have acted on the new kernel time and cannot
-         * rollback -> charge the current thread */
-        commitTime();
+        if (charge_sc == entry_sc) {
+            /* Charge kernel time + exit time to entry SC */
+            updateTimestamp();
+            NODE_STATE(ksCurTime) += getKernelExitWcetUs();
+            NODE_STATE(ksConsumed) += getKernelExitWcetUs();
+            commitTime();
+        } else {
+            /* Charge kernel time + exit time to entry SC */
+            if (ksConsumed >= getKernelEntryWcetUs()) {
+                NODE_STATE(ksCurTime) -= getKernelEntryWcetUs();
+                NODE_STATE(ksConsumed) -= getKernelEntryWcetUs();
+            } else {
+                NODE_STATE(ksCurTime) -= NODE_STATE(ksConsumed);
+                NODE_STATE(ksConsumed) = 0;
+            }
+            commitTime();
+
+            if (charge_sc != exit_sc) {
+                /* Charge kernel time to charge sc */
+                NODE_STATE(ksCurSC) = charge_sc;
+                updateTimestamp();
+                NODE_STATE(ksCurTime) += getKernelExitWcetUs();
+                NODE_STATE(ksConsumed) += getKernelExitWcetUs();
+                commitTime();
+            }
+        }
     }
 
-    NODE_STATE(ksCurSC) = NODE_STATE(ksCurThread)->tcbSchedContext;
+    NODE_STATE(ksCurSC) = exit_sc;
+    NODE_STATE(ksChargeSC) = exit_sc;
 }
+
+
+
+
+
 #endif
 
 static void scheduleChooseNewThread(void)
@@ -445,6 +479,14 @@ void switchToThread(tcb_t *thread)
     assert(!thread_state_get_tcbInReleaseQueue(thread->tcbState));
     assert(refill_sufficient(thread->tcbSchedContext, 0));
     assert(refill_ready(thread->tcbSchedContext));
+     
+    if (
+        NODE_STATE(ksChargeSC) == NODE_STATE(ksCurSC) &&
+        NODE_STATE(ksCurThread)->tcbPriority <= thread->tcbPriority
+    ) {
+        /* Preemption */
+        NODE_STATE(ksChargeSC) = thread->tcbSchedContext;
+    }
 #endif
 
 #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
