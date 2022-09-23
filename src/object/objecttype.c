@@ -678,7 +678,7 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
         }
 
         endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(cap));
-#ifdef CONFIG_KERNEL_IPCTHRESHOLDS_TESTING
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
         /* Check if a threshold exists on the endpoint */
         
         if (unlikely(endpoint_ptr_get_epThreshold(ep_ptr)!=0)) {

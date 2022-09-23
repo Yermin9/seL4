@@ -727,7 +727,7 @@ void awaken(void)
         NODE_STATE(ksReprogram) = true;
     }
 
-    #ifdef CONFIG_KERNEL_IPCTHRESHOLDS_TESTING
+    #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
 
     /* Loop for ksHoldReleaseNextHead TODO */
     while (unlikely(NODE_STATE(ksHoldReleaseNextHead) != NULL && refill_second_ready(NODE_STATE(ksHoldReleaseNextHead)->tcbSchedContext))) {

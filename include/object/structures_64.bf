@@ -202,6 +202,10 @@ block sched_control_cap {
 
 -- Endpoint: size = 16 bytes (32 bytes on mcs with endpoint thresholds)
 block endpoint {
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    field epHoldQueue_head 64
+    field epThreshold 64
+#endif
     field epQueue_head 64
 
 #if BF_CANONICAL_RANGE == 48
@@ -214,10 +218,7 @@ block endpoint {
 #error "Unspecified canonical address range"
 #endif
     field state 2
-#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
-    field epHoldQueue_head 64
-    field epThreshold 64
-#endif
+
 }
 
 -- Async endpoint: size = 32 bytes (64 bytes on mcs)
