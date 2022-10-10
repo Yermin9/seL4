@@ -200,3 +200,8 @@ void refill_budget_check(ticks_t used);
  */
 void refill_unblock_check(sched_context_t *sc);
 
+
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+bool_t available_budget_check(sched_context_t *sc, ticks_t required_budget);
+#endif

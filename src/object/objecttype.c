@@ -670,8 +670,49 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
 
         setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
 #ifdef CONFIG_KERNEL_MCS
+
+        endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(cap));
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+
+        if (endpoint_ptr_get_epThreshold(ep_ptr)!=0) {
+            if(!canDonate) {
+                /* Only invocations that can donate are permitted to use a thresholded endpoint*/
+                current_syscall_error.type = seL4_IllegalOperation;
+                return EXCEPTION_SYSCALL_ERROR;
+            }
+        }
+
+        if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
+            if (!block) {
+                /* If we can't block, send fails silently, we don't wait for sufficient budget. */
+                if (!block) {
+                    return EXCEPTION_NONE;
+                }
+
+
+                /* Check if the thread has a maximum budget > threshold */
+
+
+                /* Yield and wait budget */
+
+
+                /* Add to release queue */
+
+
+                /* Set Threadstate restart */
+
+
+                return EXCEPTION_NONE
+            }
+        }
+
+
+#endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
+
+
+
         return performInvocation_Endpoint(
-                   EP_PTR(cap_endpoint_cap_get_capEPPtr(cap)),
+                   ep_ptr,
                    cap_endpoint_cap_get_capEPBadge(cap),
                    cap_endpoint_cap_get_capCanGrant(cap),
                    cap_endpoint_cap_get_capCanGrantReply(cap), block, call, canDonate);

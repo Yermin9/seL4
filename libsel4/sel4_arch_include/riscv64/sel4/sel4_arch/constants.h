@@ -21,7 +21,11 @@
 #else
 #define seL4_NotificationBits   5
 #endif
-#define seL4_EndpointBits       4
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+#define seL4_EndpointBits 5
+#else
+#define seL4_EndpointBits 4
+#endif
 #define seL4_IPCBufferSizeBits  10
 #ifdef CONFIG_HAVE_FPU
 #define seL4_TCBBits            11

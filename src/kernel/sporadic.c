@@ -341,3 +341,27 @@ void refill_unblock_check(sched_context_t *sc)
     }
     REFILL_SANITY_END(sc);
 }
+
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+bool_t available_budget_check(sched_context_t *sc, ticks_t required_budget) {
+    word_t cur_refill_index = sc->scRefillHead;
+    ticks_t available_budget = 0;
+
+
+    while ((available_budget < required_budget) && refill_index(sc, cur_refill_index)->rTime <= NODE_STATE(ksCurTime) && cur_refill_index != sc->scRefillTail) {
+        available_budget += refill_index(sc, cur_refill_index)->rAmount;
+        cur_refill_index = cur_refill_index + 1;
+    }
+
+
+    /* If we left the loop because cur_refill_index == sc->scRefillTail, we might still need to add the tail refill*/
+    if((available_budget < required_budget) && refill_index(sc, cur_refill_index)->rTime <= NODE_STATE(ksCurTime)) {
+        available_budget += refill_index(sc, cur_refill_index)->rAmount;
+        cur_refill_index = cur_refill_index + 1;
+    }
+
+    return (available_budget >= required_budget);
+}
+
+#endif
