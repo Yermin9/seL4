@@ -160,6 +160,14 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
     }
 #endif
 
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    if (endpoint_ptr_get_epThreshold(ep_ptr)!=0) {
+        if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
+            slowpath(SysCall);
+        }
+    }
+#endif
+
 #ifdef ENABLE_SMP_SUPPORT
     /* Ensure both threads have the same affinity */
     if (unlikely(NODE_STATE(ksCurThread)->tcbAffinity != dest->tcbAffinity)) {
