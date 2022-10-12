@@ -626,6 +626,30 @@ void endTimeslice(bool_t can_timeout_fault)
         postpone(NODE_STATE(ksCurSC));
     }
 }
+
+void handleYieldUntilBudget(ticks_t desired_budget)
+{
+
+    if (refill_capacity(NODE_STATE(ksCurSC), NODE_STATE(ksConsumed)) >= desired_budget) {
+        /* SC already has desired budget in head refill. No further operation required */
+        return;
+    }
+    
+    /* Otherwise, we charge ksConsumed to the SC, then merge and defer */
+    commitTime();
+
+    merge_until_budget(NODE_STATE(ksCurSC), desired_budget);
+
+    /* It is possible that the head refill(which was insufficient), was overlapping with an unreleased refill
+     * When these are merged, the head refill becomes sufficient
+     */
+    if (!refill_ready(NODE_STATE(ksCurSC))) {
+        /* If not eligible to run, mark as needing to reschedule. */
+        postpone(NODE_STATE(ksCurThread)->tcbSchedContext);
+        scheduleTCB(NODE_STATE(ksCurThread));
+    }
+}
+
 #else
 
 void timerTick(void)

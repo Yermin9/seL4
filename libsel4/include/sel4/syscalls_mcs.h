@@ -204,6 +204,19 @@ seL4_NBSendWait(seL4_CPtr dest, seL4_MessageInfo_t msgInfo, seL4_CPtr src, seL4_
 LIBSEL4_INLINE_FUNC void
 seL4_Yield(void);
 
+
+/**
+ * @xmlonly <manual name="YieldUntilBudget" label="sel4_mcs_yield_until_budget"/> @endxmlonly
+ * @brief Causes replenishments to be merged until the head refill has at least 'budget' available.
+ *
+ * @xmlonly
+ * <docref>See <autoref label="sec:sys_yield_until_budget"/></docref>
+ * @endxmlonly
+ */
+LIBSEL4_INLINE_FUNC void
+seL4_YieldUntilBudget(seL4_Word budget);
+
+
 /**
  * @xmlonly <manual name="Wait" label="sel4_mcs_wait"/> @endxmlonly
  * @brief Perform a wait on an endpoint or notification object

@@ -342,6 +342,31 @@ void refill_unblock_check(sched_context_t *sc)
     REFILL_SANITY_END(sc);
 }
 
+bool_t merge_until_budget(sched_context_t *sc, ticks_t desired_budget) {
+    if(isRoundRobin(sc)) {
+        refill_head(NODE_STATE(ksCurSC))->rAmount += refill_tail(NODE_STATE(ksCurSC))->rAmount;
+        refill_tail(NODE_STATE(ksCurSC))->rAmount = 0;
+        
+        return refill_head(sc)->rAmount >= desired_budget;
+    }
+
+    while(!refill_single(sc) && (refill_head(sc)->rAmount < desired_budget)) {
+        refill_t old_head = refill_pop_head(sc);
+
+        refill_head(sc)->rAmount += old_head.rAmount;
+        /* Delay old_head to ensure the subsequent refill doesn't end any
+         * later (rather than simply combining refills). */
+        refill_head(sc)->rTime -= old_head.rAmount;
+
+        /* We need to make sure the new combined refill isn't released earlier than the old head
+         * Otherwise we've inadvertently shifted a backward in time, which isn't permitted.
+         */
+        refill_head(sc)->rTime = MAX(old_head.rTime, refill_head(sc)->rTime);
+    }
+
+    return refill_head(sc)->rAmount >= desired_budget;
+}
+
 
 #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
 bool_t available_budget_check(sched_context_t *sc, ticks_t required_budget) {
@@ -368,26 +393,5 @@ bool_t available_budget_check(sched_context_t *sc, ticks_t required_budget) {
     return (available_budget >= required_budget);
 }
 
-
-
-bool_t merge_until_budget(sched_context_t *sc, ticks_t desired_budget) {
-    if(isRoundRobin(sc)) {
-        refill_head(NODE_STATE(ksCurSC))->rAmount += refill_tail(NODE_STATE(ksCurSC))->rAmount;
-        refill_tail(NODE_STATE(ksCurSC))->rAmount = 0;
-        
-        return refill_head(sc)->rAmount >= desired_budget;
-    }
-
-    while(!refill_single(sc) && (refill_head(sc)->rAmount < desired_budget)) {
-        refill_t old_head = refill_pop_head(sc);
-
-        refill_head(sc)->rAmount += old_head.rAmount;
-        /* Delay old_head to ensure the subsequent refill doesn't end any
-         * later (rather than simply combining refills). */
-        refill_head(sc)->rTime -= old_head.rAmount;
-    }
-
-    return refill_head(sc)->rAmount >= desired_budget;
-}
 
 #endif
