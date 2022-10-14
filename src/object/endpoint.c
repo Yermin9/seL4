@@ -507,3 +507,8 @@ void reorderEP(endpoint_t *epptr, tcb_t *thread)
     ep_ptr_set_queue(epptr, queue);
 }
 #endif
+
+void setThreshold(endpoint_t * epptr, time_t threshold) {
+    endpoint_ptr_set_epThreshold(epptr, threshold);
+}
+
