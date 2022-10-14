@@ -508,7 +508,10 @@ void reorderEP(endpoint_t *epptr, tcb_t *thread)
 }
 #endif
 
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
 void setThreshold(endpoint_t * epptr, time_t threshold) {
     endpoint_ptr_set_epThreshold(epptr, threshold);
 }
+#endif
 
