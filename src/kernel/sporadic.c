@@ -380,14 +380,13 @@ bool_t available_budget_check(sched_context_t *sc, ticks_t required_budget) {
 
     while ((available_budget < required_budget) && refill_index(sc, cur_refill_index)->rTime <= NODE_STATE(ksCurTime) && cur_refill_index != sc->scRefillTail) {
         available_budget += refill_index(sc, cur_refill_index)->rAmount;
-        cur_refill_index = cur_refill_index + 1;
+        cur_refill_index = refill_next(sc, cur_refill_index);
     }
 
 
     /* If we left the loop because cur_refill_index == sc->scRefillTail, we might still need to add the tail refill*/
     if((available_budget < required_budget) && refill_index(sc, cur_refill_index)->rTime <= NODE_STATE(ksCurTime)) {
         available_budget += refill_index(sc, cur_refill_index)->rAmount;
-        cur_refill_index = cur_refill_index + 1;
     }
 
     return (available_budget >= required_budget);
