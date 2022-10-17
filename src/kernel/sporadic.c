@@ -343,6 +343,11 @@ void refill_unblock_check(sched_context_t *sc)
 }
 
 bool_t merge_until_budget(sched_context_t *sc, ticks_t desired_budget) {
+    if (sc->scMaxBudget< desired_budget) {
+        /* SC's maximum budget is insufficient */
+        return false;
+    }
+
     if(isRoundRobin(sc)) {
         refill_head(NODE_STATE(ksCurSC))->rAmount += refill_tail(NODE_STATE(ksCurSC))->rAmount;
         refill_tail(NODE_STATE(ksCurSC))->rAmount = 0;
@@ -369,7 +374,7 @@ bool_t merge_until_budget(sched_context_t *sc, ticks_t desired_budget) {
 
 
 #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
-bool_t available_budget_check(sched_context_t *sc, ticks_t required_budget) {
+bool_t available_budget_check(sched_context_t *sc, time_t required_budget) {
     if(isRoundRobin(sc)) {
         return refill_head(sc)->rAmount >= required_budget;
     }

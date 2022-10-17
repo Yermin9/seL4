@@ -297,7 +297,6 @@ void replyFromKernel_error(tcb_t *thread)
 
     len += (add / sizeof(word_t)) + 1;
 #endif
-
     setRegister(thread, msgInfoRegister, wordFromMessageInfo(
                     seL4_MessageInfo_new(current_syscall_error.type, 0, 0, len)));
 }
@@ -511,7 +510,7 @@ void reorderEP(endpoint_t *epptr, tcb_t *thread)
 
 #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
 void setThreshold(endpoint_t * epptr, time_t threshold) {
-    endpoint_ptr_set_epThreshold(epptr, threshold);
+    endpoint_ptr_set_epThreshold(epptr, usToTicks(threshold));
 }
 #endif
 

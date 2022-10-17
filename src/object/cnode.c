@@ -221,10 +221,6 @@ exception_t decodeCNodeInvocation(word_t invLabel, word_t length, cap_t cap,
 
 #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
     if (invLabel == EndpointSetThreshold) {
-        // lu_ret should be the target.
-        /* TODO */
-
-
         if (length < 3) {
             userError("Endpoint Set Threshold: Truncated message.");
             current_syscall_error.type = seL4_TruncatedMessage;
@@ -258,6 +254,7 @@ exception_t decodeCNodeInvocation(word_t invLabel, word_t length, cap_t cap,
         endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(destSlot->cap));
         setThreshold(ep_ptr, threshold);
 
+        setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
         return EXCEPTION_NONE;
 
     }

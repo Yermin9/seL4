@@ -34,6 +34,7 @@ static exception_t invokeSchedControl_ConfigureFlags(sched_context_t *target, wo
         }
     }
 
+    target->scMaxBudget=budget;
     if (budget == period) {
         /* this is a cool hack: for round robin, we set the
          * period to 0, which means that the budget will always be ready to be refilled

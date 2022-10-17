@@ -649,6 +649,7 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
     switch (cap_get_capType(cap)) {
     case cap_null_cap:
         userError("Attempted to invoke a null cap #%lu.", capIndex);
+        printf("Syscall number: %lu", invLabel);
         current_syscall_error.type = seL4_InvalidCapability;
         current_syscall_error.invalidCapNumber = 0;
         return EXCEPTION_SYSCALL_ERROR;
@@ -668,77 +669,91 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
             return EXCEPTION_SYSCALL_ERROR;
         }
 
-        setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
+        
 #ifdef CONFIG_KERNEL_MCS
 
         endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(cap));
 #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
 
         if (endpoint_ptr_get_epThreshold(ep_ptr)!=0) {
-            current_syscall_error.type = seL4_InvalidCapability;
-            current_syscall_error.invalidCapNumber = 0;
-            return EXCEPTION_SYSCALL_ERROR;
-
-            current_syscall_error.type = seL4_IllegalOperation;
-            return EXCEPTION_SYSCALL_ERROR;
+            printf("In Threshold check\n");
             if(!canDonate) {
                 /* Only invocations that can donate are permitted to use a thresholded endpoint*/
                 current_syscall_error.type = seL4_IllegalOperation;
                 return EXCEPTION_SYSCALL_ERROR;
             }
-        
-            if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
+            printf("Checking budget\n");
+            printf("Threshold value: %llu\n", endpoint_ptr_get_epThreshold(ep_ptr));
+            
+            /* TODO Need to avoid overflow */
+
+            // if (() >= getMaxTicksToUs()) {
+            //     ticksToUs(getMaxTicksToUs());
+            // } else {
+            //     return ticksToUs(consumed);
+            // }
+
+            ticks_t required_budget = endpoint_ptr_get_epThreshold(ep_ptr) + NODE_STATE(ksConsumed) + 2u * getKernelWcetTicks();
+            printf("Required value: %llu\n", required_budget);
+            if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, required_budget)) {
+                printf("Insufficient budget\n");
                 if (!block) {
                     /* If we can't block, send fails silently, we don't wait for sufficient budget. */
-                    if (!block) {
-                        return EXCEPTION_NONE;
-                    }
-
-                    /* Charge the thread for its usage now 
-                    * To get here, we passed through a MCS_DO_IF_BUDGET
-                    * So the thread must have at least enough budget to cover ksConsumed
-                    * So we can just commitTime().
-                    */
-                    assert(refill_sufficient(NODE_STATE(ksCurSC), NODE_STATE(ksConsumed)));
-                    commitTime();
-
-                    /* Yield and wait for sufficient budget */
-                    if(!merge_until_budget(NODE_STATE(ksCurThread)->tcbSchedContext,endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
-                        // The SC's max budget is insufficient to exceed the threshold
-                        // Return an error to user
-                        current_syscall_error.type = seL4_IllegalOperation;
-                        return EXCEPTION_SYSCALL_ERROR;
-                    }
-
-                    /* It is possible that the SC has sufficient budget now 
-                    * This can occur if there was an unreleased refill that overlapped with a released refill
-                    * When we merge these, the available budget can be sufficient, even if it was insufficient before
-                    */
-                    if(!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext,endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
-                        /* Set Threadstate restart */
-                        setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
-
-                        /* Add to release queue */
-                        postpone(NODE_STATE(ksCurThread)->tcbSchedContext);
-                        scheduleTCB(NODE_STATE(ksCurThread));
-                        return EXCEPTION_NONE;
-                    }
-    
+                    return EXCEPTION_NONE;
                 }
+
+                /* Charge the thread for its usage now 
+                * To get here, we passed through a MCS_DO_IF_BUDGET
+                * So the thread must have at least enough budget to cover ksConsumed
+                * So we can just commitTime().
+                */
+                assert(refill_sufficient(NODE_STATE(ksCurSC), NODE_STATE(ksConsumed)));
+                commitTime();
+
+                /* Yield and wait for sufficient budget */
+                printf("Merging Budget\n");
+                if(!merge_until_budget(NODE_STATE(ksCurThread)->tcbSchedContext,endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
+                    printf("Max Budget insufficient\n");
+                    // The SC's max budget is insufficient to exceed the threshold
+                    // Return an error to user
+                    current_syscall_error.type = seL4_IllegalOperation;
+                    return EXCEPTION_SYSCALL_ERROR;
+                }
+
+                /* It is possible that the SC has sufficient budget now 
+                * This can occur if there was an unreleased refill that overlapped with a released refill
+                * When we merge these, the available budget can be sufficient, even if it was insufficient before
+                */
+                if(!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext,endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
+                    printf("Still insufficient budget\n");
+                    /* Set Threadstate restart */
+                    setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
+
+                    /* Add to release queue */
+                    postpone(NODE_STATE(ksCurThread)->tcbSchedContext);
+                    scheduleTCB(NODE_STATE(ksCurThread));
+                    return EXCEPTION_NONE;
+                } else {
+                    /* Thread has sufficient */
+                }
+    
+                
             }
+            printf("Sufficient budget\n");
         }
 
 
 #endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
 
 
-
+        setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
         return performInvocation_Endpoint(
                    ep_ptr,
                    cap_endpoint_cap_get_capEPBadge(cap),
                    cap_endpoint_cap_get_capCanGrant(cap),
                    cap_endpoint_cap_get_capCanGrantReply(cap), block, call, canDonate);
 #else
+        setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
         return performInvocation_Endpoint(
                    EP_PTR(cap_endpoint_cap_get_capEPPtr(cap)),
                    cap_endpoint_cap_get_capEPBadge(cap),
