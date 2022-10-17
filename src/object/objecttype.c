@@ -675,50 +675,56 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
 #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
 
         if (endpoint_ptr_get_epThreshold(ep_ptr)!=0) {
+            current_syscall_error.type = seL4_InvalidCapability;
+            current_syscall_error.invalidCapNumber = 0;
+            return EXCEPTION_SYSCALL_ERROR;
+
+            current_syscall_error.type = seL4_IllegalOperation;
+            return EXCEPTION_SYSCALL_ERROR;
             if(!canDonate) {
                 /* Only invocations that can donate are permitted to use a thresholded endpoint*/
                 current_syscall_error.type = seL4_IllegalOperation;
                 return EXCEPTION_SYSCALL_ERROR;
             }
-        }
-
-        if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
-            if (!block) {
-                /* If we can't block, send fails silently, we don't wait for sufficient budget. */
+        
+            if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
                 if (!block) {
-                    return EXCEPTION_NONE;
+                    /* If we can't block, send fails silently, we don't wait for sufficient budget. */
+                    if (!block) {
+                        return EXCEPTION_NONE;
+                    }
+
+                    /* Charge the thread for its usage now 
+                    * To get here, we passed through a MCS_DO_IF_BUDGET
+                    * So the thread must have at least enough budget to cover ksConsumed
+                    * So we can just commitTime().
+                    */
+                    assert(refill_sufficient(NODE_STATE(ksCurSC), NODE_STATE(ksConsumed)));
+                    commitTime();
+
+                    /* Yield and wait for sufficient budget */
+                    if(!merge_until_budget(NODE_STATE(ksCurThread)->tcbSchedContext,endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
+                        // The SC's max budget is insufficient to exceed the threshold
+                        // Return an error to user
+                        current_syscall_error.type = seL4_IllegalOperation;
+                        return EXCEPTION_SYSCALL_ERROR;
+                    }
+
+                    /* It is possible that the SC has sufficient budget now 
+                    * This can occur if there was an unreleased refill that overlapped with a released refill
+                    * When we merge these, the available budget can be sufficient, even if it was insufficient before
+                    */
+                    if(!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext,endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
+                        /* Set Threadstate restart */
+                        setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
+
+                        /* Add to release queue */
+                        postpone(NODE_STATE(ksCurThread)->tcbSchedContext);
+                        scheduleTCB(NODE_STATE(ksCurThread));
+                        return EXCEPTION_NONE;
+                    }
+    
                 }
-
-                /* Charge the thread for its usage now 
-                 * To get here, we passed through a MCS_DO_IF_BUDGET
-                 * So the thread must have at least enough budget to cover ksConsumed
-                * So we can just commitTime().
-                */
-                assert(refill_sufficient(NODE_STATE(ksCurSC), NODE_STATE(ksConsumed)));
-                commitTime();
-
-                /* Yield and wait for sufficient budget */
-                if(!merge_until_budget(NODE_STATE(ksCurThread)->tcbSchedContext,endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
-                    // The SC's max budget is insufficient to exceed the threshold
-                    // Return an error to user
-                    current_syscall_error.type = seL4_IllegalOperation;
-                    return EXCEPTION_SYSCALL_ERROR;
-                }
-
-                /* It is possible that the SC has sufficient budget now 
-                 * This can occur if there was an unreleased refill that overlapped with a released refill
-                 * When we merge these, the available budget can be sufficient, even if it was insufficient before
-                 */
-                if(!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext,endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
-                    /* Set Threadstate restart */
-                    setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
-
-                    /* Add to release queue */
-                    postpone(NODE_STATE(ksCurThread)->tcbSchedContext);
-                    scheduleTCB(NODE_STATE(ksCurThread));
-                    return EXCEPTION_NONE;
-                }
- 
             }
         }
 
