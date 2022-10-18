@@ -693,7 +693,20 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
             //     return ticksToUs(consumed);
             // }
 
-            ticks_t required_budget = endpoint_ptr_get_epThreshold(ep_ptr) + NODE_STATE(ksConsumed) + 2u * getKernelWcetTicks();
+            ticks_t required_budget;
+            /* Perform addition, checking for overflow as we go */
+            if (getMaxTicksToUs() - NODE_STATE(ksConsumed) < endpoint_ptr_get_epThreshold(ep_ptr)) {
+                /* Overflow would occur */
+                required_budget = getMaxTicksToUs();
+            } else {
+                required_budget = endpoint_ptr_get_epThreshold(ep_ptr) + NODE_STATE(ksConsumed);
+                if (getMaxTicksToUs() - required_budget < 2u * getKernelWcetTicks()) {
+                    required_budget = getMaxTicksToUs();
+                } else {
+                    required_budget = required_budget + 2u * getKernelWcetTicks();
+                }
+            }
+
             printf("Required value: %llu\n", required_budget);
             if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, required_budget)) {
                 printf("Insufficient budget\n");

@@ -509,8 +509,16 @@ void reorderEP(endpoint_t *epptr, tcb_t *thread)
 
 
 #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+/* Add twice the kernel WCET to this value */
 void setThreshold(endpoint_t * epptr, time_t threshold) {
-    endpoint_ptr_set_epThreshold(epptr, usToTicks(threshold));
+    /* Check if we would overflow */
+    if (getMaxUsToTicks() <= threshold || (getMaxTicksToUs() - 2u * getKernelWcetTicks() < usToTicks(threshold))) {
+        /* Set the threshold to the maximum possible value */
+        endpoint_ptr_set_epThreshold(epptr, getMaxTicksToUs());
+        return;
+    }
+
+    endpoint_ptr_set_epThreshold(epptr, usToTicks(threshold) + 2u * getKernelWcetTicks());
 }
 #endif
 
