@@ -723,7 +723,7 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
                     /* Add to release queue, and trigger timeout exception, if configured */
                     endTimeslice(true);
                     rescheduleRequired();
-                    return EXCEPTION_THRESHOLD_RESTART;
+                    return EXCEPTION_NONE_THRESHOLD_RESTART;
                 }
     
             }
