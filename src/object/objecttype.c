@@ -718,12 +718,12 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
                 */
                 if(!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext,endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
                     /* Set Threadstate restart */
-                    setThreadState(NODE_STATE(ksCurThread), ThreadState_ThreshRestart);
+                    setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
 
                     /* Add to release queue, and trigger timeout exception, if configured */
                     endTimeslice(true);
                     rescheduleRequired();
-                    return EXCEPTION_NONE;
+                    return EXCEPTION_THRESHOLD_RESTART;
                 }
     
             }
