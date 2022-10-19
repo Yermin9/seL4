@@ -646,7 +646,7 @@ void handleYieldUntilBudget(ticks_t desired_budget)
     if (!refill_ready(NODE_STATE(ksCurSC))) {
         /* If not eligible to run, mark as needing to reschedule. */
         postpone(NODE_STATE(ksCurThread)->tcbSchedContext);
-        scheduleTCB(NODE_STATE(ksCurThread));
+        rescheduleRequired();
     }
 }
 

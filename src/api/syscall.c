@@ -336,6 +336,11 @@ static exception_t handleInvocation(bool_t isCall, bool_t isBlocking)
         }
         setThreadState(thread, ThreadState_Running);
     }
+    /* This is necessary, because for IPC threshold behaviour, we actually do want to set ThreadState_Restart*/
+    if (unlikely(
+            thread_state_get_tsType(thread->tcbState) == ThreadState_ThreshRestart)) {
+        setThreadState(thread, ThreadState_Restart);
+    }
 
     return EXCEPTION_NONE;
 }

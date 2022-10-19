@@ -649,7 +649,6 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
     switch (cap_get_capType(cap)) {
     case cap_null_cap:
         userError("Attempted to invoke a null cap #%lu.", capIndex);
-        printf("Syscall number: %lu", invLabel);
         current_syscall_error.type = seL4_InvalidCapability;
         current_syscall_error.invalidCapNumber = 0;
         return EXCEPTION_SYSCALL_ERROR;
@@ -676,40 +675,22 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
 #ifdef CONFIG_KERNEL_IPCTHRESHOLDS
 
         if (endpoint_ptr_get_epThreshold(ep_ptr)!=0) {
-            printf("In Threshold check\n");
             if(!canDonate) {
                 /* Only invocations that can donate are permitted to use a thresholded endpoint*/
                 current_syscall_error.type = seL4_IllegalOperation;
                 return EXCEPTION_SYSCALL_ERROR;
             }
-            printf("Checking budget\n");
-            printf("Threshold value: %llu\n", endpoint_ptr_get_epThreshold(ep_ptr));
-            
-            /* TODO Need to avoid overflow */
 
-            // if (() >= getMaxTicksToUs()) {
-            //     ticksToUs(getMaxTicksToUs());
-            // } else {
-            //     return ticksToUs(consumed);
-            // }
-
-            ticks_t required_budget;
+            ticks_t required_budget; 
             /* Perform addition, checking for overflow as we go */
             if (getMaxTicksToUs() - NODE_STATE(ksConsumed) < endpoint_ptr_get_epThreshold(ep_ptr)) {
                 /* Overflow would occur */
                 required_budget = getMaxTicksToUs();
             } else {
                 required_budget = endpoint_ptr_get_epThreshold(ep_ptr) + NODE_STATE(ksConsumed);
-                if (getMaxTicksToUs() - required_budget < 2u * getKernelWcetTicks()) {
-                    required_budget = getMaxTicksToUs();
-                } else {
-                    required_budget = required_budget + 2u * getKernelWcetTicks();
-                }
             }
 
-            printf("Required value: %llu\n", required_budget);
             if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, required_budget)) {
-                printf("Insufficient budget\n");
                 if (!block) {
                     /* If we can't block, send fails silently, we don't wait for sufficient budget. */
                     return EXCEPTION_NONE;
@@ -724,9 +705,7 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
                 commitTime();
 
                 /* Yield and wait for sufficient budget */
-                printf("Merging Budget\n");
                 if(!merge_until_budget(NODE_STATE(ksCurThread)->tcbSchedContext,endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
-                    printf("Max Budget insufficient\n");
                     // The SC's max budget is insufficient to exceed the threshold
                     // Return an error to user
                     current_syscall_error.type = seL4_IllegalOperation;
@@ -738,21 +717,16 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
                 * When we merge these, the available budget can be sufficient, even if it was insufficient before
                 */
                 if(!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext,endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
-                    printf("Still insufficient budget\n");
                     /* Set Threadstate restart */
-                    setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
+                    setThreadState(NODE_STATE(ksCurThread), ThreadState_ThreshRestart);
 
-                    /* Add to release queue */
-                    postpone(NODE_STATE(ksCurThread)->tcbSchedContext);
-                    scheduleTCB(NODE_STATE(ksCurThread));
+                    /* Add to release queue, and trigger timeout exception, if configured */
+                    endTimeslice(true);
+                    rescheduleRequired();
                     return EXCEPTION_NONE;
-                } else {
-                    /* Thread has sufficient */
                 }
     
-                
             }
-            printf("Sufficient budget\n");
         }
 
 
