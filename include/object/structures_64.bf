@@ -202,7 +202,7 @@ block sched_control_cap {
 
 -- Endpoint: size = 16 bytes (32 bytes on mcs with thresholds)
 block endpoint {
-#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
     field epThreshold 64
     padding 64
 #endif

@@ -28,7 +28,7 @@
 #else
 #define seL4_TCBBits            11
 #endif
-#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
 #define seL4_EndpointBits 5
 #else
 #define seL4_EndpointBits 4

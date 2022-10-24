@@ -34,7 +34,7 @@ static void emptySlot(cte_t *slot, cap_t cleanupInfo);
 static exception_t reduceZombie(cte_t *slot, bool_t exposed);
 
 #ifdef CONFIG_KERNEL_MCS
-#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
 #define CNODE_LAST_INVOCATION EndpointSetThreshold
 #else
 #define CNODE_LAST_INVOCATION CNodeRotate
@@ -219,7 +219,7 @@ exception_t decodeCNodeInvocation(word_t invLabel, word_t length, cap_t cap,
     }
 #endif
 
-#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
     if (invLabel == EndpointSetThreshold) {
         if (length < 3) {
             userError("Endpoint Set Threshold: Truncated message.");

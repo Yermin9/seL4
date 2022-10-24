@@ -160,7 +160,7 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
     }
 #endif
 
-#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
     if (endpoint_ptr_get_epThreshold(ep_ptr)!=0) {
         if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
             slowpath(SysCall);

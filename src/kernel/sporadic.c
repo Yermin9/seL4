@@ -373,7 +373,7 @@ bool_t merge_until_budget(sched_context_t *sc, ticks_t desired_budget) {
 }
 
 
-#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
 bool_t available_budget_check(sched_context_t *sc, time_t required_budget) {
     if(isRoundRobin(sc)) {
         return refill_head(sc)->rAmount >= required_budget;

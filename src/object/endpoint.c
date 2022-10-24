@@ -508,7 +508,7 @@ void reorderEP(endpoint_t *epptr, tcb_t *thread)
 #endif
 
 
-#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
 void setThreshold(endpoint_t * epptr, time_t threshold) {
     /* Add the kernel WCET to the passed threshold value, unless we were passed 0*/
     if (threshold==0) {

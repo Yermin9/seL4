@@ -672,7 +672,7 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
 #ifdef CONFIG_KERNEL_MCS
 
         endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(cap));
-#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
 
         if (endpoint_ptr_get_epThreshold(ep_ptr)!=0) {
             if(!canDonate) {

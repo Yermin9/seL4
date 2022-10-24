@@ -207,7 +207,7 @@ void refill_unblock_check(sched_context_t *sc);
  */
 bool_t merge_until_budget(sched_context_t *sc, ticks_t desired_budget);
 
-#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
 /* 
  * This sums up the available budget in the SC.
  * That is, the sum of budget in refills with a release time less than the current time.
@@ -217,3 +217,4 @@ bool_t merge_until_budget(sched_context_t *sc, ticks_t desired_budget);
 bool_t available_budget_check(sched_context_t *sc, ticks_t required_budget);
 
 #endif
+
