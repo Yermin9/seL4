@@ -517,6 +517,16 @@ static void handleYield(void)
 }
 
 
+
+
+static void handleTestingDefer(void) {
+    // commitTime();
+    time_t defer_amount = getRegister(NODE_STATE(ksCurThread), capRegister);
+    testingdefer(NODE_STATE(ksCurSC), defer_amount);
+    return;
+}
+
+
 exception_t handleSyscall(syscall_t syscall)
 {
     exception_t ret;
@@ -619,6 +629,11 @@ exception_t handleSyscall(syscall_t syscall)
 
         case SysYieldUntilBudget:
             handleYieldUntilBudget(getRegister(NODE_STATE(ksCurThread), capRegister));
+            break;
+
+        case SysTestingDefer:
+            handleTestingDefer();
+
             break;
 #endif
         case SysNBRecv:

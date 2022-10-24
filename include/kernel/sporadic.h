@@ -216,5 +216,7 @@ bool_t merge_until_budget(sched_context_t *sc, ticks_t desired_budget);
  */
 bool_t available_budget_check(sched_context_t *sc, ticks_t required_budget);
 
+void testingdefer(sched_context_t *sc, time_t defer_amount);
+
 #endif
 

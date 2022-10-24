@@ -218,6 +218,18 @@ seL4_YieldUntilBudget(seL4_Word budget);
 
 
 /**
+ * @xmlonly <manual name="TestingDefer" label="sel4_mcs_yield_until_budget11"/> @endxmlonly
+ * @brief Causes replenishments to be merged until the head refill has at least 'budget' available.
+ *
+ * @xmlonly
+ * <docref>See <autoref label="sec:sys_yield_until_budget"/></docref>
+ * @endxmlonly
+ */
+LIBSEL4_INLINE_FUNC void
+seL4_TestingDefer(seL4_Word defer_amount);
+
+
+/**
  * @xmlonly <manual name="Wait" label="sel4_mcs_wait"/> @endxmlonly
  * @brief Perform a wait on an endpoint or notification object
  *

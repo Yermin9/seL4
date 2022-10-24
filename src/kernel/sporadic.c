@@ -397,5 +397,24 @@ bool_t available_budget_check(sched_context_t *sc, time_t required_budget) {
     return (available_budget >= required_budget);
 }
 
+void testingdefer(sched_context_t *sc, time_t defer_amount) {
+        ticks_t ticks = usToTicks(defer_amount);
+    if (ticks> refill_head(NODE_STATE(ksCurSC))->rAmount) {
+        chargeBudget(refill_head(NODE_STATE(ksCurSC))->rAmount, false);
+        // printf("Yielding\n");
+        return;
+    }
+    /* Create new refill */
+    refill_t used = (refill_t) {
+        .rAmount = ticks,
+        .rTime = refill_head(NODE_STATE(ksCurSC))->rTime + sc->scPeriod,
+    };
+    /* Subract time from head */
+    refill_head(NODE_STATE(ksCurSC))->rAmount = refill_head(NODE_STATE(ksCurSC))->rAmount - ticks;
+
+    /* Schedule new */
+    schedule_used(NODE_STATE(ksCurSC), used);
+    return;
+}
 
 #endif

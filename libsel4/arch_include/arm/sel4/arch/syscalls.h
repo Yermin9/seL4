@@ -490,6 +490,11 @@ LIBSEL4_INLINE_FUNC void seL4_Yield(void)
     asm volatile("" ::: "memory");
 }
 
+LIBSEL4_INLINE_FUNC void seL4_TestingDefer(seL4_Word budget)
+{
+    arm_sys_send(seL4_SysTestingDefer, budget, 0, 0, 0, 0, 0);
+}
+
 #ifdef CONFIG_KERNEL_MCS
 LIBSEL4_INLINE_FUNC seL4_MessageInfo_t seL4_Wait(seL4_CPtr src, seL4_Word *sender)
 {
