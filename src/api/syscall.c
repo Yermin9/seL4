@@ -334,7 +334,10 @@ static exception_t handleInvocation(bool_t isCall, bool_t isBlocking)
      */
     if (unlikely(
             thread_state_get_tsType(thread->tcbState) == ThreadState_Restart
-            && status != EXCEPTION_NONE_THRESHOLD_RESTART)) {
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS 
+            && status != EXCEPTION_NONE_THRESHOLD_RESTART
+#endif
+            )) {
         if (isCall) {
             replyFromKernel_success_empty(thread);
         }
