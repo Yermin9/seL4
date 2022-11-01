@@ -619,10 +619,10 @@ exception_t handleSyscall(syscall_t syscall)
             handleRecv(true, false);
             break;
 
-
         case SysYieldUntilBudget:
             handleYieldUntilBudget(getRegister(NODE_STATE(ksCurThread), capRegister));
             break;
+
 #endif
         case SysNBRecv:
             handleRecv(false, true);

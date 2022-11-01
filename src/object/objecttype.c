@@ -675,6 +675,7 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
 #if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
         endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(cap));
         if (endpoint_ptr_get_epThreshold(ep_ptr)!=0) {
+            
             if(!canDonate) {
                 /* Only invocations that can donate are permitted to use a thresholded endpoint*/
                 current_syscall_error.type = seL4_IllegalOperation;
@@ -690,7 +691,11 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
                 required_budget = endpoint_ptr_get_epThreshold(ep_ptr) + NODE_STATE(ksConsumed);
             }
 
+            printf("EP Required Threshold: %llu\n", required_budget);
+            // print("Available Budget: %llu\n", NODE_STATE(ksCurSC));
+
             if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, required_budget)) {
+                
                 if (!block) {
                     /* If we can't block, send fails silently, we don't wait for sufficient budget. */
                     return EXCEPTION_NONE;

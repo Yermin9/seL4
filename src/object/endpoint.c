@@ -523,7 +523,8 @@ void setThreshold(endpoint_t * epptr, time_t threshold) {
         endpoint_ptr_set_epThreshold(epptr, getMaxTicksToUs());
         return;
     }
-
+    printf("Setting ticks %llu\n", usToTicks(threshold) + 2u * getKernelWcetTicks());
+    printf("11000 in ticks is %llu\n", usToTicks(11000));
     endpoint_ptr_set_epThreshold(epptr, usToTicks(threshold) + 2u * getKernelWcetTicks());
 }
 #endif
