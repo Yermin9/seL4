@@ -23,7 +23,11 @@ static inline void reply_unlink(reply_t *reply, tcb_t *tcb)
 }
 
 /* Push a reply object onto the call stack */
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+void reply_push(tcb_t *tcb_caller, tcb_t *tcb_callee, reply_t *reply, bool_t canDonate, ticks_t threshold);
+#else
 void reply_push(tcb_t *tcb_caller, tcb_t *tcb_callee, reply_t *reply, bool_t canDonate);
+#endif
 /* Pop the head reply from the call stack */
 void reply_pop(reply_t *reply, tcb_t *tcb);
 /* Remove a reply from the call stack - replyTCB must be in ThreadState_BlockedOnReply */

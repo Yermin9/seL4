@@ -691,7 +691,7 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
                 required_budget = endpoint_ptr_get_epThreshold(ep_ptr) + NODE_STATE(ksConsumed);
             }
 
-            printf("EP Required Threshold: %llu\n", required_budget);
+            // printf("EP Required Threshold: %llu\n", required_budget);
             // print("Available Budget: %llu\n", NODE_STATE(ksCurSC));
 
             if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, required_budget)) {
@@ -699,6 +699,11 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
                 if (!block) {
                     /* If we can't block, send fails silently, we don't wait for sufficient budget. */
                     return EXCEPTION_NONE;
+                }
+                if ((NODE_STATE(ksCurSC)->scReply->budgetLimit - NODE_STATE(ksCurSC)->budgetLimitConsumed) >= required_budget) {
+                    /* The budgetLimit is insufficient to pass the threshold */
+                    current_syscall_error.type = seL4_IllegalOperation;
+                    return EXCEPTION_SYSCALL_ERROR;
                 }
 
                 /* Charge the thread for its usage now 
@@ -711,8 +716,8 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
 
                 /* Yield and wait for sufficient budget */
                 if(!merge_until_budget(NODE_STATE(ksCurThread)->tcbSchedContext,endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
-                    // The SC's max budget is insufficient to exceed the threshold
-                    // Return an error to user
+                    /* The SC's max budget is insufficient to exceed the threshold */
+                    /* Return an error to user */
                     current_syscall_error.type = seL4_IllegalOperation;
                     return EXCEPTION_SYSCALL_ERROR;
                 }

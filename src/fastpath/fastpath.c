@@ -162,7 +162,7 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
 
 #if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
     if (endpoint_ptr_get_epThreshold(ep_ptr)!=0) {
-        if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
+        if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + endpoint_ptr_get_epThreshold(ep_ptr))) {
             slowpath(SysCall);
         }
     }
@@ -212,9 +212,36 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
     reply->replyPrev = call_stack_new(REPLY_REF(sc->scReply), false);
     if (unlikely(old_caller)) {
         old_caller->replyNext = call_stack_new(REPLY_REF(reply), false);
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+        if (endpoint_ptr_get_epThreshold(ep_ptr)!=0) {
+            reply->budgetLimit = endpoint_ptr_get_epThreshold(ep_ptr);
+            sc->budgetLimitSet=1;
+
+            /* Can probably be asserted away */
+            reply->scReturn=NULL;
+            reply->replyReturnPtr=NULL;
+
+        } else if (old_caller->budgetLimit!=0) {
+  
+
+        }
+#endif
     }
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    else {
+        if (endpoint_ptr_get_epThreshold(ep_ptr)!=0) {
+            reply->budgetLimit = endpoint_ptr_get_epThreshold(ep_ptr);
+            sc->budgetLimitSet=1;
+            /* Can probably be asserted away */
+            reply->scReturn=NULL;
+            reply->replyReturnPtr=NULL;
+        }
+    }
+#endif
     reply->replyNext = call_stack_new(SC_REF(sc), true);
     sc->scReply = reply;
+
+
 #else
     /* Get sender reply slot */
     cte_t *replySlot = TCB_PTR_CTE_PTR(NODE_STATE(ksCurThread), tcbReply);
@@ -434,7 +461,17 @@ void NORETURN fastpath_reply_recv(word_t cptr, word_t msgInfo)
 #ifdef CONFIG_KERNEL_MCS
     /* not possible to set reply object and not be blocked */
     assert(thread_state_get_replyObject(NODE_STATE(ksCurThread)->tcbState) == 0);
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    /* Check if we need to return SC to a different thread */
+    if (reply_ptr->replyPrev==0 && reply_ptr->scReturn!=0) {
+        slowpath(SysReplyRecv);
+    }
 #endif
+#endif
+
+
+
 
     /*
      * --- POINT OF NO RETURN ---
@@ -504,6 +541,10 @@ void NORETURN fastpath_reply_recv(word_t cptr, word_t msgInfo)
     /* TODO neccessary? */
     reply_ptr->replyPrev.words[0] = 0;
     reply_ptr->replyNext.words[0] = 0;
+
+    reply_ptr->scReturn=0;
+    reply_ptr->replyReturnPtr=0;
+
 #else
     /* Delete the reply cap. */
     mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged(

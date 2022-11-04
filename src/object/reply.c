@@ -5,8 +5,11 @@
  */
 
 #include <object/reply.h>
-
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+void reply_push(tcb_t *tcb_caller, tcb_t *tcb_callee, reply_t *reply, bool_t canDonate, ticks_t threshold)
+#else
 void reply_push(tcb_t *tcb_caller, tcb_t *tcb_callee, reply_t *reply, bool_t canDonate)
+#endif
 {
     sched_context_t *sc_donated = tcb_caller->tcbSchedContext;
 
@@ -41,7 +44,39 @@ void reply_push(tcb_t *tcb_caller, tcb_t *tcb_callee, reply_t *reply, bool_t can
         reply->replyPrev = call_stack_new(REPLY_REF(old_caller), false);
         if (old_caller) {
             old_caller->replyNext = call_stack_new(REPLY_REF(reply), false);
-        }
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+            if (threshold!=0) {
+                reply->budgetLimit = threshold;
+                sc_donated->budgetLimitSet=1;
+
+                /* Can probably be asserted away */
+                reply->scReturn=NULL;
+                reply->replyReturnPtr=NULL;
+
+            } else if (old_caller->budgetLimit!=0) {
+                reply->budgetLimit = old_caller->budgetLimit;
+
+                if (old_caller->scReturn==NULL) {
+                    reply->scReturn = old_caller->replyTCB;
+                    reply->replyReturnPtr = old_caller->replyPrev;
+                } else {
+                    reply->scReturn = old_caller->scReturn;
+                    reply->replyReturnPtr = old_caller->replyReturnPtr;
+                }
+            }
+#endif
+        } 
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+        else if (threshold!=0) {
+                /* If there is a threshold set on this endpoint, we only need to  */
+                reply->budgetLimit = threshold;
+                sc_donated->budgetLimitSet=1;
+                /* Can probably be asserted away */
+                reply->scReturn=NULL;
+                reply->replyReturnPtr=NULL;
+            }
+#endif
+
         reply->replyNext = call_stack_new(SC_REF(sc_donated), true);
         sc_donated->scReply = reply;
 
@@ -71,6 +106,31 @@ void reply_pop(reply_t *reply, tcb_t *tcb)
         }
 
         /* give it back */
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+        else if (reply->scReturn!=NULL) {
+            /* If prev_ptr==0 and scReturn!=NULL, then we need to return the SC elsewhere to follow threshold behaviour.*/
+            
+            /* We need to return the SC to the thread pointed at by scReturn */
+            /* Check that the caller has not received another SC */
+            if (reply->scReturn->tcbSchedContext==NULL) {
+                schedContext_donate(SC_PTR(next_ptr), reply->scReturn);
+
+                /* Restart that thread */
+                word_t fault_type = seL4_Fault_get_seL4_FaultType(reply->scReturn->tcbFault);
+                if (likely(fault_type == seL4_Fault_NullFault)) {
+                    setThreadState(reply->scReturn, ThreadState_Running);
+                } else {
+                    bool_t restart = handleFaultReply(receiver, sender);
+                    receiver->tcbFault = seL4_Fault_NullFault_new();
+                    if (restart) {
+                        setThreadState(receiver, ThreadState_Restart);
+                    } else {
+                       setThreadState(receiver, ThreadState_Inactive);
+                    }
+            }
+        } else   
+#endif
+        
         if (tcb->tcbSchedContext == NULL) {
             /* only give the SC back if our SC is NULL. This prevents
              * strange behaviour when a thread is bound to an sc while it is
@@ -82,6 +142,10 @@ void reply_pop(reply_t *reply, tcb_t *tcb)
 
     reply->replyPrev = call_stack_new(0, false);
     reply->replyNext = call_stack_new(0, false);
+
+    reply->scReturn=0;
+    reply->replyReturnPtr=0;
+
     reply_unlink(reply, tcb);
 }
 
@@ -99,13 +163,19 @@ void reply_remove(reply_t *reply, tcb_t *tcb)
         /* head of the call stack -> just pop */
         reply_pop(reply, tcb);
     } else {
+        /* Keep chain connected */
+
         if (next_ptr) {
-            /* not the head, remove from middle - break the chain */
+            /* not the head, remove from middle - keep chain connected */
             REPLY_PTR(next_ptr)->replyPrev = call_stack_new(0, false);
         }
         if (prev_ptr) {
             REPLY_PTR(prev_ptr)->replyNext = call_stack_new(0, false);
         }
+
+
+
+        
         reply->replyPrev = call_stack_new(0, false);
         reply->replyNext = call_stack_new(0, false);
         reply_unlink(reply, tcb);

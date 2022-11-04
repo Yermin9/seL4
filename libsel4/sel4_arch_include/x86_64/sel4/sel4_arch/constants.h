@@ -35,7 +35,11 @@
 #endif
 #ifdef CONFIG_KERNEL_MCS
 #define seL4_NotificationBits   6
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+#define seL4_ReplyBits          6
+#else
 #define seL4_ReplyBits          5
+#endif
 #else
 #define seL4_NotificationBits   5
 #endif

@@ -372,9 +372,17 @@ struct sched_context {
     /* Index of the tail of the refill circular buffer */
     word_t scRefillTail;
 
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    /* Budget limit restriction on passive servers enforced by endpoint thresholds */
+    ticks_t budgetLimitConsumed;
+
+    bool_t budgetLimitSet;
+#endif
+
     /* Whether to apply constant-bandwidth/sliding-window constraint
      * rather than only sporadic server constraints */
     bool_t scSporadic;
+
 
 
 };
@@ -398,8 +406,31 @@ struct reply {
      * context was passed along the call chain */
     call_stack_t replyNext;
 
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    /* Return pointer for the SC. Used to identify which thread the SC should be returned to.
+        NULL: No special SC return behaviour. Return with the IPC reply as normal.
+        Non-NULL and replyPrev!=0: Indicates thread to return to upon exceeding budget limit.
+        NON-NULL and replyPrev==0: Return SC to this thread regardless of how the reply is invoked.
+    */
+    tcb_t *scReturn;
+
+    /* The reply object, if there is one, that a returned SC should be bound to. */
+    call_stack_t replyReturnPtr;
+
+    ticks_t budgetLimit;
+
     /* Unused, explicit padding to make struct size the correct power of 2. */
     word_t padding;
+
+#endif
+
+
+    /* Unused, explicit padding to make struct size the correct power of 2. */
+    word_t padding;
+
+
+    
 };
 #endif
 
