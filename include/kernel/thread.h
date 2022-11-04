@@ -218,12 +218,6 @@ static inline void updateRestartPC(tcb_t *tcb)
  */
 void endTimeslice(bool_t can_timeout_fault);
 
-/* Allows a thread to defer and merge its refills until the head
- * refill contains a desired amount of budget
- * If the desired budget > maxBudget in threads SC, we just defer until a full replenishment is created.
- */
-void handleYieldUntilBudget(ticks_t desired_budget);
-
 /* called when a thread has used up its head refill */
 void chargeBudget(ticks_t consumed, bool_t canTimeoutFault);
 

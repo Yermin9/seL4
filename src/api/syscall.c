@@ -518,6 +518,33 @@ static void handleYield(void)
     rescheduleRequired();
 #endif
 }
+#ifdef CONFIG_KERNEL_MCS
+
+static void handleYieldUntilBudget(ticks_t desired_budget) {
+    if (desired_budget==0) {
+        handleYield();
+        return;
+    }
+    if (refill_capacity(NODE_STATE(ksCurSC), NODE_STATE(ksConsumed)) >= desired_budget) {
+        /* SC already has desired budget in head refill. No further operation required */
+        return;
+    }
+    
+    /* Otherwise, we charge ksConsumed to the SC, then merge and defer */
+    commitTime();
+
+    merge_until_budget(NODE_STATE(ksCurSC), desired_budget);
+
+    /* It is possible that the head refill(which was insufficient), was overlapping with an unreleased refill
+     * When these are merged, the head refill becomes sufficient
+     */
+    if (!refill_ready(NODE_STATE(ksCurSC))) {
+        /* If not eligible to run, mark as needing to reschedule. */
+        postpone(NODE_STATE(ksCurThread)->tcbSchedContext);
+        rescheduleRequired();
+    }
+}
+#endif
 
 
 exception_t handleSyscall(syscall_t syscall)
@@ -574,6 +601,10 @@ exception_t handleSyscall(syscall_t syscall)
             handleRecv(true, true);
             break;
 
+        case SysYield:
+            handleYield();
+            break;
+
 #else /* CONFIG_KERNEL_MCS */
         case SysWait:
             handleRecv(true, false);
@@ -626,10 +657,6 @@ exception_t handleSyscall(syscall_t syscall)
 #endif
         case SysNBRecv:
             handleRecv(false, true);
-            break;
-
-        case SysYield:
-            handleYield();
             break;
 
         default:
