@@ -484,18 +484,23 @@ LIBSEL4_INLINE_FUNC seL4_MessageInfo_t seL4_NBSendWaitWithMRs(seL4_CPtr dest, se
 }
 #endif
 
+#ifdef CONFIG_KERNEL_MCS
+
 LIBSEL4_INLINE_FUNC void seL4_YieldUntilBudget(seL4_Word budget)
 {
     arm_sys_send_null(seL4_SysYieldUntilBudget, budget, seL4_MessageInfo_new(0, 0, 0, 0).words[0]);
     asm volatile("" ::: "memory");
 }
+#else
 
-// LIBSEL4_INLINE_FUNC void seL4_Yield(void)
-// {
+LIBSEL4_INLINE_FUNC void seL4_Yield(void)
+{
     
-//     arm_sys_null(seL4_SysYield);
-//     asm volatile("" ::: "memory");
-// }
+    arm_sys_null(seL4_SysYield);
+    asm volatile("" ::: "memory");
+}
+
+#endif 
 
 #ifdef CONFIG_KERNEL_MCS
 LIBSEL4_INLINE_FUNC seL4_MessageInfo_t seL4_Wait(seL4_CPtr src, seL4_Word *sender)
