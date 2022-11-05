@@ -207,6 +207,12 @@ void refill_unblock_check(sched_context_t *sc);
  */
 bool_t merge_until_budget(sched_context_t *sc, ticks_t desired_budget);
 
+/* This function does exactly the same thing as merge_until_budget, but is used in the Yield implementation.
+ * But not having a return value means that it speeds up the slowpath by 5% (At least on ARMv8a)
+ * Even on paths where it isn't ever called
+ */
+void merge_until_budget_void(sched_context_t *sc, ticks_t desired_budget);
+
 #if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
 /* 
  * This sums up the available budget in the SC.

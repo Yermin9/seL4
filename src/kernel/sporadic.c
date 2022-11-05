@@ -372,6 +372,36 @@ bool_t merge_until_budget(sched_context_t *sc, ticks_t desired_budget) {
     return refill_head(sc)->rAmount >= desired_budget;
 }
 
+void merge_until_budget_void(sched_context_t *sc, ticks_t desired_budget) {
+    if (sc->scMaxBudget< desired_budget) {
+        /* SC's maximum budget is insufficient */
+        return;
+    }
+
+    if(isRoundRobin(sc)) {
+        refill_head(NODE_STATE(ksCurSC))->rAmount += refill_tail(NODE_STATE(ksCurSC))->rAmount;
+        refill_tail(NODE_STATE(ksCurSC))->rAmount = 0;
+        
+        return;
+    }
+
+    while(!refill_single(sc) && (refill_head(sc)->rAmount < desired_budget)) {
+        refill_t old_head = refill_pop_head(sc);
+
+        refill_head(sc)->rAmount += old_head.rAmount;
+        /* Delay old_head to ensure the subsequent refill doesn't end any
+         * later (rather than simply combining refills). */
+        refill_head(sc)->rTime -= old_head.rAmount;
+
+        /* We need to make sure the new combined refill isn't released earlier than the old head
+         * Otherwise we've inadvertently shifted a backward in time, which isn't permitted.
+         */
+        refill_head(sc)->rTime = MAX(old_head.rTime, refill_head(sc)->rTime);
+    }
+
+    return;
+}
+
 
 #if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
 bool_t available_budget_check(sched_context_t *sc, time_t required_budget) {

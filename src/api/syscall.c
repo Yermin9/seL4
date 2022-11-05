@@ -521,10 +521,12 @@ static void handleYield(void)
 #ifdef CONFIG_KERNEL_MCS
 
 static void handleYieldUntilBudget(ticks_t desired_budget) {
-    if (desired_budget==0) {
+    if (likely(desired_budget==0)) {
         handleYield();
         return;
     }
+    
+    // return;
     if (refill_capacity(NODE_STATE(ksCurSC), NODE_STATE(ksConsumed)) >= desired_budget) {
         /* SC already has desired budget in head refill. No further operation required */
         return;
@@ -533,7 +535,7 @@ static void handleYieldUntilBudget(ticks_t desired_budget) {
     /* Otherwise, we charge ksConsumed to the SC, then merge and defer */
     commitTime();
 
-    merge_until_budget(NODE_STATE(ksCurSC), desired_budget);
+    merge_until_budget_void(NODE_STATE(ksCurSC), desired_budget);
 
     /* It is possible that the head refill(which was insufficient), was overlapping with an unreleased refill
      * When these are merged, the head refill becomes sufficient
