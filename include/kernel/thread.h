@@ -144,6 +144,9 @@ static inline void commitTime(void)
             assert(refill_ready(NODE_STATE(ksCurSC)));
         }
         NODE_STATE(ksCurSC)->scConsumed += NODE_STATE(ksConsumed);
+        if (NODE_STATE(ksCurSC)->budgetLimitSet) {
+            NODE_STATE(ksCurSC)->blconsumed += NODE_STATE(ksConsumed);
+        }
     }
 
     NODE_STATE(ksConsumed) = 0llu;
@@ -268,6 +271,9 @@ static inline bool_t checkBudget(void)
     /* currently running thread must have available capacity */
     assert(refill_ready(NODE_STATE(ksCurSC)));
 
+    /* Check the thread's budgetLimit */
+
+
     /* if the budget isn't enough, the timeslice for this SC is over. */
     if (likely(refill_sufficient(NODE_STATE(ksCurSC), NODE_STATE(ksConsumed)))) {
         if (unlikely(isCurDomainExpired())) {
@@ -308,4 +314,9 @@ void awaken(void);
  * of periodic threads waiting for budget recharge */
 void postpone(sched_context_t *sc);
 #endif
+
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
+void budgetLimitExpired(void);
+#endif
+
 

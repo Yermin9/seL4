@@ -584,7 +584,13 @@ void setNextInterrupt(void)
     if (NODE_STATE(ksReleaseHead) != NULL) {
         next_interrupt = MIN(refill_head(NODE_STATE(ksReleaseHead)->tcbSchedContext)->rTime, next_interrupt);
     }
-
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
+    if (NODE_STATE(ksCurSC)->budgetLimitSet) {
+        assert(NODE_STATE(ksCurSC)->scReply!=NULL);
+        assert(NODE_STATE(ksCurSC)->scReply->budgetLimit >= NODE_STATE(ksCurSC)->blconsumed);
+        next_interrupt = MIN(NODE_STATE(ksCurSC)->scReply->budgetLimit - NODE_STATE(ksCurSC)->blconsumed, next_interrupt);
+    }
+#endif
     setDeadline(next_interrupt - getTimerPrecision());
 }
 
@@ -601,6 +607,9 @@ void chargeBudget(ticks_t consumed, bool_t canTimeoutFault)
 
         assert(refill_head(NODE_STATE(ksCurSC))->rAmount >= MIN_BUDGET);
         NODE_STATE(ksCurSC)->scConsumed += consumed;
+        if (NODE_STATE(ksCurSC)->budgetLimitSet) {
+            NODE_STATE(ksCurSC)->blconsumed += consumed;
+        }
     }
     NODE_STATE(ksConsumed) = 0;
     if (likely(isSchedulable(NODE_STATE(ksCurThread)))) {
@@ -692,4 +701,32 @@ void awaken(void)
         NODE_STATE(ksReprogram) = true;
     }
 }
+#endif
+
+
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
+
+void budgetLimitExpired(void) {
+
+    reply_t *reply = NODE_STATE(ksCurSC)->scReply;
+    assert(reply!=NULL);
+
+    tcb_t *receiver = reply->replyTCB;
+
+    /* Do replyremove */
+    reply_remove(reply, receiver);
+
+
+
+    
+    /* Return it an error */
+
+    /* Set the error type */
+    current_syscall_error.type = seL4_TimeoutError;
+    replyFromKernel_error(receiver);
+
+    /* Mark the target thread as running */
+    setThreadState(receiver, ThreadState_Running);
+}
+
 #endif
