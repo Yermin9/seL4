@@ -584,11 +584,12 @@ void setNextInterrupt(void)
     if (NODE_STATE(ksReleaseHead) != NULL) {
         next_interrupt = MIN(refill_head(NODE_STATE(ksReleaseHead)->tcbSchedContext)->rTime, next_interrupt);
     }
+
 #if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
     if (NODE_STATE(ksCurSC)->budgetLimitSet) {
         assert(NODE_STATE(ksCurSC)->scReply!=NULL);
-        assert(NODE_STATE(ksCurSC)->scReply->budgetLimit >= NODE_STATE(ksCurSC)->blconsumed);
-        next_interrupt = MIN(NODE_STATE(ksCurSC)->scReply->budgetLimit - NODE_STATE(ksCurSC)->blconsumed, next_interrupt);
+        assert(NODE_STATE(ksCurSC)->scReply->budgetLimit > NODE_STATE(ksCurSC)->blconsumed + NODE_STATE(ksConsumed));
+        next_interrupt = MIN(NODE_STATE(ksCurTime) + NODE_STATE(ksCurSC)->scReply->budgetLimit - NODE_STATE(ksCurSC)->blconsumed - NODE_STATE(ksConsumed), next_interrupt);
     }
 #endif
     setDeadline(next_interrupt - getTimerPrecision());
@@ -695,9 +696,6 @@ void budgetLimitExpired(void) {
     /* Do replyremove */
     reply_remove(reply, receiver);
 
-
-
-    
     /* Return it an error */
 
     /* Set the error type */
@@ -706,6 +704,14 @@ void budgetLimitExpired(void) {
 
     /* Mark the target thread as running */
     setThreadState(receiver, ThreadState_Running);
+
+    if (receiver->tcbSchedContext && isRunnable(receiver)) {
+        if ((refill_ready(receiver->tcbSchedContext) && refill_sufficient(receiver->tcbSchedContext, 0))) {
+            possibleSwitchTo(receiver);
+        } else {
+            postpone(receiver->tcbSchedContext);
+        }
+    }
 }
 
 #endif

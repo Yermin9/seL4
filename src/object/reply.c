@@ -8,6 +8,7 @@
 
 void reply_push(tcb_t *tcb_caller, tcb_t *tcb_callee, reply_t *reply, bool_t canDonate, ticks_t threshold)
 {
+    printf("Pushing RO\n");
     sched_context_t *sc_donated = tcb_caller->tcbSchedContext;
 
     assert(tcb_caller != NULL);
@@ -48,9 +49,8 @@ void reply_push(tcb_t *tcb_caller, tcb_t *tcb_callee, reply_t *reply, bool_t can
         /* Set budgetlimit */
         reply->budgetLimit=threshold;
 
+        
         if(threshold!=0 && !sc_donated->budgetLimitSet) {
-            /* If we get here, we should have done a threshold budget check and done a commitTime(). */
-            assert(NODE_STATE(ksConsumed)==0);
             sc_donated->budgetLimitSet=true;
             sc_donated->blconsumed=0;
         }
