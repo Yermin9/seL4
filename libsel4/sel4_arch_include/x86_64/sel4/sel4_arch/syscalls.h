@@ -546,11 +546,21 @@ LIBSEL4_INLINE_FUNC seL4_MessageInfo_t seL4_NBSendWaitWithMRs(seL4_CPtr dest, se
 }
 #endif
 
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+
+LIBSEL4_INLINE_FUNC void seL4_YieldUntilBudget(seL4_Word budget) {
+    x64_sys_send(seL4_SysYieldUntilBudget, budget, 0, 0, 0, 0, 0);
+}
+
+#else
+
 LIBSEL4_INLINE_FUNC void seL4_Yield(void)
 {
     x64_sys_null(seL4_SysYield);
     asm volatile("" ::: "memory");
 }
+
+#endif
 
 #ifdef CONFIG_VTX
 LIBSEL4_INLINE_FUNC seL4_Word seL4_VMEnter(seL4_Word *sender)
