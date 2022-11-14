@@ -88,12 +88,12 @@ void reply_pop(reply_t *reply, tcb_t *tcb)
              * SC cannot go back to the caller if the caller has received another one */
             schedContext_donate(SC_PTR(next_ptr), tcb);
 
-            
+
             if (reply->budgetLimit!=0) {
                 /* Need to reprogram the timer */
                 NODE_STATE(ksReprogram) = true;
                 reply->budgetLimit=0;
-                if (prev_ptr == 0 || prev_ptr != 0 && REPLY_PTR(prev_ptr)->budgetLimit==0) {
+                if (prev_ptr == 0 || (prev_ptr != 0 && REPLY_PTR(prev_ptr)->budgetLimit==0)) {
                     /* Budget limts are no longer in effect for the SC */
                     SC_PTR(next_ptr)->budgetLimitSet=false;
                 }

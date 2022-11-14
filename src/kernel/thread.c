@@ -683,27 +683,6 @@ void rescheduleRequired(void)
     NODE_STATE(ksSchedulerAction) = SchedulerAction_ChooseNewThread;
 }
 
-#ifdef CONFIG_KERNEL_MCS
-void awaken(void)
-{
-    while (unlikely(NODE_STATE(ksReleaseHead) != NULL && refill_ready(NODE_STATE(ksReleaseHead)->tcbSchedContext))) {
-        tcb_t *awakened = tcbReleaseDequeue();
-        /* the currently running thread cannot have just woken up */
-        assert(awakened != NODE_STATE(ksCurThread));
-        /* round robin threads should not be in the release queue */
-        assert(!isRoundRobin(awakened->tcbSchedContext));
-        /* threads should wake up on the correct core */
-        SMP_COND_STATEMENT(assert(awakened->tcbAffinity == getCurrentCPUIndex()));
-        /* threads HEAD refill should always be >= MIN_BUDGET */
-        assert(refill_sufficient(awakened->tcbSchedContext, 0));
-        possibleSwitchTo(awakened);
-        /* changed head of release queue -> need to reprogram */
-        NODE_STATE(ksReprogram) = true;
-    }
-}
-#endif
-
-
 #if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
 
 void budgetLimitExpired(void) {
@@ -730,3 +709,26 @@ void budgetLimitExpired(void) {
 }
 
 #endif
+
+
+#ifdef CONFIG_KERNEL_MCS
+void awaken(void)
+{
+    while (unlikely(NODE_STATE(ksReleaseHead) != NULL && refill_ready(NODE_STATE(ksReleaseHead)->tcbSchedContext))) {
+        tcb_t *awakened = tcbReleaseDequeue();
+        /* the currently running thread cannot have just woken up */
+        assert(awakened != NODE_STATE(ksCurThread));
+        /* round robin threads should not be in the release queue */
+        assert(!isRoundRobin(awakened->tcbSchedContext));
+        /* threads should wake up on the correct core */
+        SMP_COND_STATEMENT(assert(awakened->tcbAffinity == getCurrentCPUIndex()));
+        /* threads HEAD refill should always be >= MIN_BUDGET */
+        assert(refill_sufficient(awakened->tcbSchedContext, 0));
+        possibleSwitchTo(awakened);
+        /* changed head of release queue -> need to reprogram */
+        NODE_STATE(ksReprogram) = true;
+    }
+}
+#endif
+
+
