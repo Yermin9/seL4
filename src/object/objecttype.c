@@ -693,6 +693,7 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
 
 
             if (NODE_STATE(ksCurSC)->budgetLimitSet) {
+                printf("BL set\n");
                 /* The budget limit must be less than the available budget, so if this is the case, we only need to do this check. */
 
                 assert(NODE_STATE(ksCurSC)->scReply!=NULL);
@@ -709,9 +710,6 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
 
             } else {
 
-
-                printf("EP Required Threshold: %llu\n", required_budget);
-                // print("Available Budget: %llu\n", NODE_STATE(ksCurSC));
 
                 if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, required_budget)) {
                     

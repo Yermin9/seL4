@@ -277,9 +277,7 @@ static inline bool_t checkBudget(void)
 
 #if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
     /* Check the thread's budgetLimit */
-    if (NODE_STATE(ksCurSC)->budgetLimitSet) {
-    }
-    if (NODE_STATE(ksCurSC)->budgetLimitSet && NODE_STATE(ksCurSC)->scReply->budgetLimit < NODE_STATE(ksCurSC)->blconsumed + NODE_STATE(ksConsumed)) {
+    if (NODE_STATE(ksCurSC)->budgetLimitSet && (NODE_STATE(ksCurSC)->scReply->budgetLimit - 2u *getKernelWcetTicks() < NODE_STATE(ksCurSC)->blconsumed + NODE_STATE(ksConsumed))) {
         printf("Calling BLE\n");
         budgetLimitExpired();
         return false;

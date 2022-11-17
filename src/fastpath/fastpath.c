@@ -234,13 +234,10 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
         sc->budgetLimitSet=true;
         sc->blconsumed=0;
     }
-
-
-    /* Need to reprogram the timer to account for the budgetLimit */
-    setNextInterrupt();
-
-
 #endif
+
+
+
 
 #else
     /* Get sender reply slot */
@@ -264,6 +261,14 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
     thread_state_ptr_set_tsType_np(&dest->tcbState,
                                    ThreadState_Running);
     switchToThread_fp(dest, cap_pd, stored_hw_asid);
+
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    if (threshold!=0) {
+        /* Need to reprogram the timer to account for the budgetLimit */
+        setNextInterrupt();
+    }
+#endif
 
     msgInfo = wordFromMessageInfo(seL4_MessageInfo_set_capsUnwrapped(info, 0));
 
@@ -526,21 +531,18 @@ void NORETURN fastpath_reply_recv(word_t cptr, word_t msgInfo)
     sc->scReply = REPLY_PTR(prev_ptr);
     if (unlikely(REPLY_PTR(prev_ptr) != NULL)) {
         sc->scReply->replyNext = reply_ptr->replyNext;
-#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)   
-        if (REPLY_PTR(prev_ptr)->budgetLimit==0) {
+    }
+
+
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)  
+    bool_t reprogram = false;
+    if (reply_ptr->budgetLimit!=0) {
+        if (prev_ptr == 0 || (prev_ptr != 0 && REPLY_PTR(prev_ptr)->budgetLimit==0)) {
             /* Budget limts are no longer in effect for the SC */
             sc->budgetLimitSet=false;
         }
-#endif
-    }
-#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)   
-    else {
-        /* Budget limts are no longer in effect for the SC */
-        sc->budgetLimitSet=false;
-    }
-
-    if (reply_ptr->budgetLimit!=0) {
-        setNextInterrupt();
+        updateTimestamp();
+        reprogram=true;
     }
 #endif
 
@@ -571,6 +573,13 @@ void NORETURN fastpath_reply_recv(word_t cptr, word_t msgInfo)
     thread_state_ptr_set_tsType_np(&caller->tcbState,
                                    ThreadState_Running);
     switchToThread_fp(caller, cap_pd, stored_hw_asid);
+    
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    if (reprogram) {
+        /* Need to reprogram the timer to account for the budgetLimit */
+        setNextInterrupt();
+    }
+#endif
 
     msgInfo = wordFromMessageInfo(seL4_MessageInfo_set_capsUnwrapped(info, 0));
 
