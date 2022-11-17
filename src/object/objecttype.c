@@ -755,16 +755,17 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
             NODE_STATE(ksReprogram) = true;
 
 
-        } else if (NODE_STATE(ksCurSC)->budgetLimitSet) {
-            /* If a budget limit is in effect, we only permit donation over an endpoint with a threshold */
-            /* So disable canDonate since there is no threshold*/
-            setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
-            return performInvocation_Endpoint(
-                    EP_PTR(cap_endpoint_cap_get_capEPPtr(cap)),
-                    cap_endpoint_cap_get_capEPBadge(cap),
-                    cap_endpoint_cap_get_capCanGrant(cap),
-                    cap_endpoint_cap_get_capCanGrantReply(cap), block, call, false);
-        }
+        } 
+        // else if (NODE_STATE(ksCurSC)->budgetLimitSet) {
+        //     /* If a budget limit is in effect, we only permit donation over an endpoint with a threshold */
+        //     /* So disable canDonate since there is no threshold*/
+        //     setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
+        //     return performInvocation_Endpoint(
+        //             EP_PTR(cap_endpoint_cap_get_capEPPtr(cap)),
+        //             cap_endpoint_cap_get_capEPBadge(cap),
+        //             cap_endpoint_cap_get_capCanGrant(cap),
+        //             cap_endpoint_cap_get_capCanGrantReply(cap), block, call, false);
+        // }
 
 
 #endif /* CONFIG_KERNEL_IPCTHRESHOLDS */

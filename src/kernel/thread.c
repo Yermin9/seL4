@@ -588,10 +588,6 @@ void setNextInterrupt(void)
 #if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
     if (NODE_STATE(ksCurSC)->budgetLimitSet) {
         assert(NODE_STATE(ksCurSC)->scReply!=NULL);
-        printf("BudgetLimit %llu\n", NODE_STATE(ksCurSC)->scReply->budgetLimit);
-        printf("BlConsumed %llu\n", NODE_STATE(ksCurSC)->blconsumed);
-        printf("ksConsumed %llu\n", NODE_STATE(ksConsumed));
-        printf("Kernel WCET %llu\n", getKernelWcetTicks());
         assert(NODE_STATE(ksCurSC)->scReply->budgetLimit > NODE_STATE(ksCurSC)->blconsumed + NODE_STATE(ksConsumed) + getKernelWcetTicks() );
         next_interrupt = MIN(NODE_STATE(ksCurTime) + NODE_STATE(ksCurSC)->scReply->budgetLimit - NODE_STATE(ksCurSC)->blconsumed - NODE_STATE(ksConsumed) - getKernelWcetTicks(), next_interrupt);
     }
