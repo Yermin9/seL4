@@ -161,9 +161,18 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
 #endif
 
 #if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
-    ticks_t threshold = endpoint_ptr_get_epThreshold(ep_ptr);
-    if (threshold!=0) {
-        if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + threshold)) {
+    if (endpoint_ptr_get_epThreshold(ep_ptr)!=0) {
+        ticks_t required_budget; 
+        /* Perform addition, checking for overflow as we go */
+        if (unlikely(getMaxTicksToUs() - NODE_STATE(ksConsumed) < endpoint_ptr_get_epThreshold(ep_ptr))) {
+            /* Overflow would occur */
+            /* Effectively impossible to pass the threshold, go to slowpath */
+            slowpath(SysCall);
+        } else {
+            required_budget = endpoint_ptr_get_epThreshold(ep_ptr) + NODE_STATE(ksConsumed);
+        }
+
+        if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, required_budget)) {
             slowpath(SysCall);
         }
     }
