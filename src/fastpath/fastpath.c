@@ -162,6 +162,7 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
 
 #if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
     if (endpoint_ptr_get_epThreshold(ep_ptr)!=0) {
+        updateTimestamp();
         ticks_t required_budget; 
         /* Perform addition, checking for overflow as we go */
         if (unlikely(getMaxTicksToUs() - NODE_STATE(ksConsumed) < endpoint_ptr_get_epThreshold(ep_ptr))) {
