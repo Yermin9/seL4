@@ -90,7 +90,7 @@ void reply_pop(reply_t *reply, tcb_t *tcb)
              * SC cannot go back to the caller if the caller has received another one */
             schedContext_donate(SC_PTR(next_ptr), tcb);
 
-
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
             if (reply->budgetLimit!=0) {
                 /* Need to reprogram the timer */
                 NODE_STATE(ksReprogram) = true;
@@ -100,6 +100,7 @@ void reply_pop(reply_t *reply, tcb_t *tcb)
                     SC_PTR(next_ptr)->budgetLimitSet=false;
                 }
             }
+#endif
         }
     }
 

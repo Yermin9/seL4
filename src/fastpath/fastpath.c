@@ -161,15 +161,16 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
 #endif
 
 #if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
-    if (endpoint_ptr_get_epThreshold(ep_ptr)!=0) {
+    ticks_t threshold = endpoint_ptr_get_epThreshold(ep_ptr)
+    if (threshold!=0) {
         ticks_t required_budget; 
         /* Perform addition, checking for overflow as we go */
-        if (unlikely(getMaxTicksToUs() - NODE_STATE(ksConsumed) < endpoint_ptr_get_epThreshold(ep_ptr))) {
+        if (unlikely(getMaxTicksToUs() - NODE_STATE(ksConsumed) < threshold)) {
             /* Overflow would occur */
             /* Effectively impossible to pass the threshold, go to slowpath */
             slowpath(SysCall);
         } else {
-            required_budget = endpoint_ptr_get_epThreshold(ep_ptr) + NODE_STATE(ksConsumed);
+            required_budget = threshold + NODE_STATE(ksConsumed);
         }
 
         if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, required_budget)) {
@@ -226,8 +227,12 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
     reply->replyNext = call_stack_new(SC_REF(sc), true);
     sc->scReply = reply;
 
-#ifdef(CONFIG_KERNEL_IPCTHRESHOLDS)
-    
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    reply->budgetLimit=threshold;
+    if(threshold!=0 && !sc->budgetLimitSet) {
+        sc->budgetLimitSet=true;
+        sc->blconsumed=0;
+    }
 #endif
 
 #else
