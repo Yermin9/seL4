@@ -161,8 +161,9 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
 #endif
 
 #if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
-    if (endpoint_ptr_get_epThreshold(ep_ptr)!=0) {
-        if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
+    ticks_t threshold = endpoint_ptr_get_epThreshold(ep_ptr);
+    if (threshold!=0) {
+        if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, NODE_STATE(ksConsumed) + threshold)) {
             slowpath(SysCall);
         }
     }
@@ -215,6 +216,11 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
     }
     reply->replyNext = call_stack_new(SC_REF(sc), true);
     sc->scReply = reply;
+
+#ifdef(CONFIG_KERNEL_IPCTHRESHOLDS)
+    
+#endif
+
 #else
     /* Get sender reply slot */
     cte_t *replySlot = TCB_PTR_CTE_PTR(NODE_STATE(ksCurThread), tcbReply);

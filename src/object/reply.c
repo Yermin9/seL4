@@ -46,6 +46,8 @@ void reply_push(tcb_t *tcb_caller, tcb_t *tcb_callee, reply_t *reply, bool_t can
         reply->replyNext = call_stack_new(SC_REF(sc_donated), true);
         sc_donated->scReply = reply;
 
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
         /* Set budgetlimit */
         reply->budgetLimit=threshold;
 
@@ -54,7 +56,7 @@ void reply_push(tcb_t *tcb_caller, tcb_t *tcb_callee, reply_t *reply, bool_t can
             sc_donated->budgetLimitSet=true;
             sc_donated->blconsumed=0;
         }
-
+#endif
         /* now do the actual donation */
         schedContext_donate(sc_donated, tcb_callee);
     }
