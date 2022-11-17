@@ -234,6 +234,12 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
         sc->budgetLimitSet=true;
         sc->blconsumed=0;
     }
+
+
+    /* Need to reprogram the timer to account for the budgetLimit */
+    setNextInterrupt();
+
+
 #endif
 
 #else
@@ -517,14 +523,45 @@ void NORETURN fastpath_reply_recv(word_t cptr, word_t msgInfo)
     caller->tcbSchedContext = sc;
     sc->scTcb = caller;
 
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
+    if (reply_ptr->budgetLimit!=0) {
+        /* Need to reprogram the timer */
+        if (prev_ptr == 0 || (prev_ptr != 0 && REPLY_PTR(prev_ptr)->budgetLimit==0)) {
+            /* Budget limts are no longer in effect for the SC */
+            SC_PTR(next_ptr)->budgetLimitSet=false;
+        }
+    }
+#endif
+
+
     sc->scReply = REPLY_PTR(prev_ptr);
     if (unlikely(REPLY_PTR(prev_ptr) != NULL)) {
         sc->scReply->replyNext = reply_ptr->replyNext;
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)   
+        if (REPLY_PTR(prev_ptr)->budgetLimit==0) {
+            /* Budget limts are no longer in effect for the SC */
+            sc->budgetLimitSet=false;
+        }
+#endif
     }
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)   
+    else {
+        /* Budget limts are no longer in effect for the SC */
+        sc->budgetLimitSet=false;
+    }
+
+    if (reply_ptr->budgetLimit!=0) {
+        setNextInterrupt();
+    }
+#endif
 
     /* TODO neccessary? */
     reply_ptr->replyPrev.words[0] = 0;
     reply_ptr->replyNext.words[0] = 0;
+
+
+
+
 #else
     /* Delete the reply cap. */
     mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged(

@@ -753,6 +753,8 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
                 }
             }
 
+            /* On a success, where we just fall through, we need to reprogram the timer to enforce the budget limit */
+            NODE_STATE(ksReprogram) = true;
 
 
         } else if (NODE_STATE(ksCurSC)->budgetLimitSet) {
