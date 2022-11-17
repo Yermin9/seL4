@@ -161,7 +161,7 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
 #endif
 
 #if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
-    ticks_t threshold = endpoint_ptr_get_epThreshold(ep_ptr)
+    ticks_t threshold = endpoint_ptr_get_epThreshold(ep_ptr);
     if (threshold!=0) {
         updateTimestamp();
         ticks_t required_budget; 
@@ -522,17 +522,6 @@ void NORETURN fastpath_reply_recv(word_t cptr, word_t msgInfo)
     NODE_STATE(ksCurThread)->tcbSchedContext = NULL;
     caller->tcbSchedContext = sc;
     sc->scTcb = caller;
-
-#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
-    if (reply_ptr->budgetLimit!=0) {
-        /* Need to reprogram the timer */
-        if (prev_ptr == 0 || (prev_ptr != 0 && REPLY_PTR(prev_ptr)->budgetLimit==0)) {
-            /* Budget limts are no longer in effect for the SC */
-            SC_PTR(next_ptr)->budgetLimitSet=false;
-        }
-    }
-#endif
-
 
     sc->scReply = REPLY_PTR(prev_ptr);
     if (unlikely(REPLY_PTR(prev_ptr) != NULL)) {
