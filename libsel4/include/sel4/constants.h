@@ -74,7 +74,7 @@ typedef enum {
 
 #ifdef CONFIG_KERNEL_MCS
 /* Minimum size of a scheduling context (2^{n} bytes) */
-#define seL4_MinSchedContextBits 7
+#define seL4_MinSchedContextBits 8
 #ifndef __ASSEMBLER__
 /* the size of a scheduling context, excluding extra refills */
 #define seL4_CoreSchedContextBytes (11 * sizeof(seL4_Word) + (6 * 8))
