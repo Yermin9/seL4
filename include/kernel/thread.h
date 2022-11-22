@@ -144,6 +144,9 @@ static inline void commitTime(void)
             assert(refill_ready(NODE_STATE(ksCurSC)));
         }
         NODE_STATE(ksCurSC)->scConsumed += NODE_STATE(ksConsumed);
+        if (NODE_STATE(ksCurSC)->budgetLimitSet) {
+            NODE_STATE(ksCurSC)->blconsumed += NODE_STATE(ksConsumed);
+        }
     }
 
     NODE_STATE(ksConsumed) = 0llu;
@@ -175,6 +178,9 @@ void doIPCTransfer(tcb_t *sender, endpoint_t *endpoint,
                    word_t badge, bool_t grant, tcb_t *receiver);
 #ifdef CONFIG_KERNEL_MCS
 void doReplyTransfer(tcb_t *sender, reply_t *reply, bool_t grant);
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
+void budgetLimitExpired(void);
+#endif
 #else
 void doReplyTransfer(tcb_t *sender, tcb_t *receiver, cte_t *slot, bool_t grant);
 void timerTick(void);
@@ -268,6 +274,16 @@ static inline bool_t checkBudget(void)
     /* currently running thread must have available capacity */
     assert(refill_ready(NODE_STATE(ksCurSC)));
 
+
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
+    /* Check the thread's budgetLimit */
+    if (NODE_STATE(ksCurSC)->budgetLimitSet && (NODE_STATE(ksCurSC)->scReply->budgetLimit - 2u *getKernelWcetTicks() < NODE_STATE(ksCurSC)->blconsumed + NODE_STATE(ksConsumed))) {
+        printf("Calling BLE\n");
+        budgetLimitExpired();
+        return false;
+    }
+#endif
+
     /* if the budget isn't enough, the timeslice for this SC is over. */
     if (likely(refill_sufficient(NODE_STATE(ksCurSC), NODE_STATE(ksConsumed)))) {
         if (unlikely(isCurDomainExpired())) {
@@ -308,4 +324,9 @@ void awaken(void);
  * of periodic threads waiting for budget recharge */
 void postpone(sched_context_t *sc);
 #endif
+
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
+void budgetLimitExpired(void);
+#endif
+
 

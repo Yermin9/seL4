@@ -416,8 +416,8 @@ BOOT_CODE static void configure_sched_context(tcb_t *tcb, sched_context_t *sc_pp
 {
     tcb->tcbSchedContext = sc_pptr;
     refill_new(tcb->tcbSchedContext, MIN_REFILLS, timeslice, 0);
-    tcb->tcbSchedContext->scTcb = tcb;
     tcb->tcbSchedContext->scMaxBudget = timeslice;
+   tcb->tcbSchedContext->scTcb = tcb;
 }
 
 BOOT_CODE bool_t init_sched_control(cap_t root_cnode_cap, word_t num_nodes)

@@ -376,6 +376,10 @@ struct sched_context {
      * rather than only sporadic server constraints */
     bool_t scSporadic;
 
+    ticks_t blconsumed;
+
+    bool_t budgetLimitSet;
+
 
 };
 
@@ -398,8 +402,7 @@ struct reply {
      * context was passed along the call chain */
     call_stack_t replyNext;
 
-    /* Unused, explicit padding to make struct size the correct power of 2. */
-    word_t padding;
+    ticks_t budgetLimit;
 };
 #endif
 

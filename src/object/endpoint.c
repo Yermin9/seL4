@@ -91,7 +91,7 @@ void sendIPC(bool_t blocking, bool_t do_call, word_t badge,
         if (do_call ||
             seL4_Fault_ptr_get_seL4_FaultType(&thread->tcbFault) != seL4_Fault_NullFault) {
             if (reply != NULL && (canGrant || canGrantReply)) {
-                reply_push(thread, dest, reply, canDonate);
+                reply_push(thread, dest, reply, canDonate, endpoint_ptr_get_epThreshold(epptr));
             } else {
                 setThreadState(thread, ThreadState_Inactive);
             }
@@ -254,7 +254,7 @@ void receiveIPC(tcb_t *thread, cap_t cap, bool_t isBlocking)
                 if ((canGrant || canGrantReply) && replyPtr != NULL) {
                     bool_t canDonate = sender->tcbSchedContext != NULL
                                        && seL4_Fault_get_seL4_FaultType(sender->tcbFault) != seL4_Fault_Timeout;
-                    reply_push(sender, thread, replyPtr, canDonate);
+                    reply_push(sender, thread, replyPtr, canDonate, endpoint_ptr_get_epThreshold(epptr));
                 } else {
                     setThreadState(sender, ThreadState_Inactive);
                 }
@@ -523,9 +523,9 @@ void setThreshold(endpoint_t * epptr, time_t threshold) {
         endpoint_ptr_set_epThreshold(epptr, getMaxTicksToUs());
         return;
     }
-    printf("Setting ticks %llu\n", usToTicks(threshold) + 2u * getKernelWcetTicks());
-    printf("11000 in ticks is %llu\n", usToTicks(11000));
-    endpoint_ptr_set_epThreshold(epptr, usToTicks(threshold) + 2u * getKernelWcetTicks());
+    // printf("Setting ticks %llu\n", usToTicks(threshold) + 2u * getKernelWcetTicks());
+    // printf("11000 in ticks is %llu\n", usToTicks(11000));
+    endpoint_ptr_set_epThreshold(epptr, usToTicks(threshold) + 4u * getKernelWcetTicks());
 }
 #endif
 
