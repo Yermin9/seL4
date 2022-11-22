@@ -297,7 +297,6 @@ void replyFromKernel_error(tcb_t *thread)
 
     len += (add / sizeof(word_t)) + 1;
 #endif
-
     setRegister(thread, msgInfoRegister, wordFromMessageInfo(
                     seL4_MessageInfo_new(current_syscall_error.type, 0, 0, len)));
 }
@@ -507,3 +506,26 @@ void reorderEP(endpoint_t *epptr, tcb_t *thread)
     ep_ptr_set_queue(epptr, queue);
 }
 #endif
+
+
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
+void setThreshold(endpoint_t * epptr, time_t threshold) {
+    /* Add the kernel WCET to the passed threshold value, unless we were passed 0*/
+    if (threshold==0) {
+        /* Just set the value */
+        endpoint_ptr_set_epThreshold(epptr, 0);
+        return;
+    }
+    
+    /* Check if we would overflow */
+    if (getMaxUsToTicks() <= threshold || (getMaxTicksToUs() - 2u * getKernelWcetTicks() < usToTicks(threshold))) {
+        /* Set the threshold to the maximum possible value */
+        endpoint_ptr_set_epThreshold(epptr, getMaxTicksToUs());
+        return;
+    }
+    printf("Setting ticks %llu\n", usToTicks(threshold) + 2u * getKernelWcetTicks());
+    printf("11000 in ticks is %llu\n", usToTicks(11000));
+    endpoint_ptr_set_epThreshold(epptr, usToTicks(threshold) + 2u * getKernelWcetTicks());
+}
+#endif
+

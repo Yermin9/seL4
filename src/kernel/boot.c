@@ -416,7 +416,7 @@ BOOT_CODE static bool_t configure_sched_context(tcb_t *tcb, sched_context_t *sc_
 {
     tcb->tcbSchedContext = sc_pptr;
     REFILL_NEW(tcb->tcbSchedContext, MIN_REFILLS, timeslice, 0, core);
-
+    tcb->tcbSchedContext->scMaxBudget = timeslice;
     tcb->tcbSchedContext->scTcb = tcb;
     return true;
 }

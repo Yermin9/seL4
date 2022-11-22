@@ -626,6 +626,8 @@ void endTimeslice(bool_t can_timeout_fault)
         postpone(NODE_STATE(ksCurSC));
     }
 }
+
+
 #else
 
 void timerTick(void)

@@ -343,6 +343,9 @@ struct sched_context {
      * was last called or a timeout exception fired */
     ticks_t scConsumed;
 
+    /* Maximum budget this SC can possess */
+    ticks_t scMaxBudget;
+
     /* core this scheduling context provides time for - 0 if uniprocessor */
     word_t scCore;
 
@@ -372,6 +375,8 @@ struct sched_context {
     /* Whether to apply constant-bandwidth/sliding-window constraint
      * rather than only sporadic server constraints */
     bool_t scSporadic;
+
+
 };
 
 struct reply {

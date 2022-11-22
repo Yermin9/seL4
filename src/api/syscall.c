@@ -329,13 +329,21 @@ static exception_t handleInvocation(bool_t isCall, bool_t isBlocking)
         return EXCEPTION_NONE;
     }
 
+    /* The EXCEPTION_NONE_THRESHOLD_RESTART check is necessary, 
+     * because for IPC threshold behaviour, we actually do want to set ThreadState_Restart
+     */
     if (unlikely(
-            thread_state_get_tsType(thread->tcbState) == ThreadState_Restart)) {
+            thread_state_get_tsType(thread->tcbState) == ThreadState_Restart
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS 
+            && status != EXCEPTION_NONE_THRESHOLD_RESTART
+#endif
+            )) {
         if (isCall) {
             replyFromKernel_success_empty(thread);
         }
         setThreadState(thread, ThreadState_Running);
     }
+    
 
     return EXCEPTION_NONE;
 }
@@ -510,6 +518,36 @@ static void handleYield(void)
     rescheduleRequired();
 #endif
 }
+#ifdef CONFIG_KERNEL_MCS
+
+static void handleYieldUntilBudget(ticks_t desired_budget) {
+    if (likely(desired_budget==0)) {
+        handleYield();
+        return;
+    }
+    
+    // return;
+    if (refill_capacity(NODE_STATE(ksCurSC), NODE_STATE(ksConsumed)) >= desired_budget) {
+        /* SC already has desired budget in head refill. No further operation required */
+        return;
+    }
+    
+    /* Otherwise, we charge ksConsumed to the SC, then merge and defer */
+    commitTime();
+
+    merge_until_budget_void(NODE_STATE(ksCurSC), desired_budget);
+
+    /* It is possible that the head refill(which was insufficient), was overlapping with an unreleased refill
+     * When these are merged, the head refill becomes sufficient
+     */
+    if (!refill_ready(NODE_STATE(ksCurSC))) {
+        /* If not eligible to run, mark as needing to reschedule. */
+        postpone(NODE_STATE(ksCurThread)->tcbSchedContext);
+        rescheduleRequired();
+    }
+}
+#endif
+
 
 exception_t handleSyscall(syscall_t syscall)
 {
@@ -565,6 +603,10 @@ exception_t handleSyscall(syscall_t syscall)
             handleRecv(true, true);
             break;
 
+        case SysYield:
+            handleYield();
+            break;
+
 #else /* CONFIG_KERNEL_MCS */
         case SysWait:
             handleRecv(true, false);
@@ -609,13 +651,14 @@ exception_t handleSyscall(syscall_t syscall)
             }
             handleRecv(true, false);
             break;
+
+        case SysYieldUntilBudget:
+            handleYieldUntilBudget(getRegister(NODE_STATE(ksCurThread), capRegister));
+            break;
+
 #endif
         case SysNBRecv:
             handleRecv(false, true);
-            break;
-
-        case SysYield:
-            handleYield();
             break;
 
         default:
