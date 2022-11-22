@@ -76,6 +76,7 @@ Add budget check on fastpath
 Create a YieldUntilBudget() syscall
 
 
+<<<<<<< HEAD
 Create a set_Threshold syscall
 
 
@@ -83,3 +84,6 @@ Create a set_Threshold syscall
 
 
 
+=======
+Create a set_Threshold syscall
+>>>>>>> BEPS_simplified
