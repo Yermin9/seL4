@@ -546,10 +546,9 @@ LIBSEL4_INLINE_FUNC seL4_MessageInfo_t seL4_NBSendWaitWithMRs(seL4_CPtr dest, se
 }
 #endif
 
-LIBSEL4_INLINE_FUNC void seL4_Yield(void)
-{
-    x64_sys_null(seL4_SysYield);
-    asm volatile("" ::: "memory");
+
+LIBSEL4_INLINE_FUNC void seL4_YieldUntilBudget(seL4_Word budget) {
+    x64_sys_send(seL4_SysYieldUntilBudget, budget, 0, 0, 0, 0, 0);
 }
 
 #ifdef CONFIG_VTX

@@ -91,7 +91,7 @@ void sendIPC(bool_t blocking, bool_t do_call, word_t badge,
         if (do_call ||
             seL4_Fault_ptr_get_seL4_FaultType(&thread->tcbFault) != seL4_Fault_NullFault) {
             if (reply != NULL && (canGrant || canGrantReply)) {
-                reply_push(thread, dest, reply, canDonate);
+                reply_push(thread, dest, reply, canDonate, endpoint_ptr_get_epThreshold(epptr), endpoint_ptr_get_epBudgetLimit(epptr));
             } else {
                 setThreadState(thread, ThreadState_Inactive);
             }
@@ -254,7 +254,7 @@ void receiveIPC(tcb_t *thread, cap_t cap, bool_t isBlocking)
                 if ((canGrant || canGrantReply) && replyPtr != NULL) {
                     bool_t canDonate = sender->tcbSchedContext != NULL
                                        && seL4_Fault_get_seL4_FaultType(sender->tcbFault) != seL4_Fault_Timeout;
-                    reply_push(sender, thread, replyPtr, canDonate);
+                    reply_push(sender, thread, replyPtr, canDonate, endpoint_ptr_get_epThreshold(epptr), endpoint_ptr_get_epBudgetLimit(epptr));
                 } else {
                     setThreadState(sender, ThreadState_Inactive);
                 }
@@ -297,7 +297,6 @@ void replyFromKernel_error(tcb_t *thread)
 
     len += (add / sizeof(word_t)) + 1;
 #endif
-
     setRegister(thread, msgInfoRegister, wordFromMessageInfo(
                     seL4_MessageInfo_new(current_syscall_error.type, 0, 0, len)));
 }
@@ -507,3 +506,26 @@ void reorderEP(endpoint_t *epptr, tcb_t *thread)
     ep_ptr_set_queue(epptr, queue);
 }
 #endif
+
+
+#ifdef CONFIG_KERNEL_MCS
+void setThreshold(endpoint_t * epptr, time_t threshold, bool_t budgetLimit) {
+    /* Add the kernel WCET to the passed threshold value, unless we were passed 0*/
+    if (threshold==0) {
+        /* Just set the value */
+        endpoint_ptr_set_epThreshold(epptr, 0);
+        endpoint_ptr_set_epBudgetLimit(epptr, 0);
+        return;
+    }
+    endpoint_ptr_set_epBudgetLimit(epptr, budgetLimit);
+    /* Check if we would overflow */
+    if (getMaxUsToTicks() <= threshold || (getMaxTicksToUs() - 2u * getKernelWcetTicks() < usToTicks(threshold))) {
+        /* Set the threshold to the maximum possible value */
+        endpoint_ptr_set_epThreshold(epptr, getMaxTicksToUs());
+        return;
+    }
+    
+    endpoint_ptr_set_epThreshold(epptr, usToTicks(threshold) + 2u * getKernelWcetTicks());
+}
+#endif
+

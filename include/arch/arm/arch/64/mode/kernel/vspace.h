@@ -11,6 +11,7 @@
 #include <api/failures.h>
 #include <object/structures.h>
 
+#define activate_global_pd activate_kernel_vspace
 #define MODE_RESERVED 0
 
 /* ==================== BOOT CODE FINISHES HERE ==================== */

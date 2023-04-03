@@ -299,7 +299,9 @@ BOOT_CODE bool_t init_sys_state(
 #endif
 
     /* create the idle thread */
-    create_idle_thread();
+    if (!create_idle_thread()) {
+        return false;
+    }
 
     /* create the initial thread */
     tcb_t *initial = create_initial_thread(root_cnode_cap,
