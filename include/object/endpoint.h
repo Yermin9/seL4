@@ -37,3 +37,7 @@ void cancelBadgedSends(endpoint_t *epptr, word_t badge);
 void replyFromKernel_error(tcb_t *thread);
 void replyFromKernel_success_empty(tcb_t *thread);
 
+
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
+void setThreshold(endpoint_t * epptr, time_t threshold);
+#endif

@@ -533,6 +533,15 @@ config_string(
     DEPENDS "KernelIsMCS" UNDEF_DISABLED
 )
 
+config_string(
+    KernelIpcThresholds KERNEL_IPCTHRESHOLDS
+    "Enables thresholds on IPC Endpoints"
+    DEFAULT 1
+    UNQUOTE
+    DEPENDS "KernelIsMCS" UNDEF_DISABLED
+    DEPENDS "KernelIpcThresholds" UNDEF_DISABLED
+)
+
 config_option(
     KernelClz32 CLZ_32 "Define a __clzsi2 function to count leading zeros for uint32_t arguments. \
                         Only needed on platforms which lack a builtin instruction."

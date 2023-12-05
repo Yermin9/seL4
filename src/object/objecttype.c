@@ -581,11 +581,7 @@ cap_t createObject(object_t t, void *regionBase, word_t userSize, bool_t deviceM
                          (Ptr ((ptr_val \<acute>regionBase) +
                                word_of_nat (size_of TYPE(sched_context_C))) :: refill_C ptr)
               \<circ> ptr_retyp (Ptr (ptr_val \<acute>regionBase) :: sched_context_C ptr))" */
-        /** GHOSTUPD:
-            "(True, gs_new_refill_buffer_length (ptr_val \<acute>regionBase)
-                                                (refills_len (unat \<acute>userSize)
-                                                             (size_of TYPE(sched_context_C))
-                                                             (size_of TYPE(refill_C))))" */
+        /** GHOSTUPD: "(True, gs_new_sc_size (ptr_val \<acute>regionBase) (unat \<acute>userSize))" */
         memzero(regionBase, BIT(userSize));
         return cap_sched_context_cap_new(SC_REF(regionBase), userSize);
 
@@ -668,14 +664,117 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
             return EXCEPTION_SYSCALL_ERROR;
         }
 
-        setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
+        
 #ifdef CONFIG_KERNEL_MCS
+
+        
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
+        endpoint_t* ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(cap));
+        if (endpoint_ptr_get_epThreshold(ep_ptr)!=0) {
+            
+            if(!canDonate) {
+                /* Only invocations that can donate are permitted to use a thresholded endpoint*/
+                current_syscall_error.type = seL4_IllegalOperation;
+                return EXCEPTION_SYSCALL_ERROR;
+            }
+
+            ticks_t required_budget; 
+            /* Perform addition, checking for overflow as we go */
+            if (getMaxTicksToUs() - NODE_STATE(ksConsumed) < endpoint_ptr_get_epThreshold(ep_ptr)) {
+                /* Overflow would occur */
+                required_budget = getMaxTicksToUs();
+            } else {
+                required_budget = endpoint_ptr_get_epThreshold(ep_ptr) + NODE_STATE(ksConsumed);
+            }
+
+
+            if (NODE_STATE(ksCurSC)->budgetLimitSet) {
+                printf("BL set\n");
+                /* The budget limit must be less than the available budget, so if this is the case, we only need to do this check. */
+
+                assert(NODE_STATE(ksCurSC)->scReply!=NULL);
+
+                ticks_t budgetLimitAvailable = NODE_STATE(ksCurSC)->scReply->budgetLimit - NODE_STATE(ksCurSC)->blconsumed; 
+
+                if (budgetLimitAvailable < required_budget) {
+                    /* This is an invalid invocation, so we treat it as an expired budget limit */
+                    budgetLimitExpired();
+                    return EXCEPTION_NONE;
+                }
+
+                /* Otherwise we fall through and let the IPC continue*/
+
+            } else {
+
+
+                if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, required_budget)) {
+                    
+                    if (!block) {
+                        /* If we can't block, send fails silently, we don't wait for sufficient budget. */
+                        return EXCEPTION_NONE;
+                    }
+
+                    /* Charge the thread for its usage now 
+                    * To get here, we passed through a MCS_DO_IF_BUDGET
+                    * So the thread must have at least enough budget to cover ksConsumed
+                    * So we can just commitTime().
+                    */
+                    assert(refill_sufficient(NODE_STATE(ksCurSC), NODE_STATE(ksConsumed)));
+                    commitTime();
+
+                    /* Yield and wait for sufficient budget */
+                    if(!merge_until_budget(NODE_STATE(ksCurThread)->tcbSchedContext,endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
+                        // The SC's max budget is insufficient to exceed the threshold
+                        // Return an error to user
+                        current_syscall_error.type = seL4_IllegalOperation;
+                        return EXCEPTION_SYSCALL_ERROR;
+                    }
+
+                    /* It is possible that the SC has sufficient budget now 
+                    * This can occur if there was an unreleased refill that overlapped with a released refill
+                    * When we merge these, the available budget can be sufficient, even if it was insufficient before
+                    */
+                    if(!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext,endpoint_ptr_get_epThreshold(ep_ptr) + 2u * getKernelWcetTicks())) {
+                        /* Set Threadstate restart */
+                        setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
+
+                        /* Add to release queue, and trigger timeout exception, if configured */
+                        endTimeslice(true);
+                        rescheduleRequired();
+                        return EXCEPTION_NONE_THRESHOLD_RESTART;
+                    }
+        
+                }
+            }
+
+            /* On a success, where we just fall through, we need to reprogram the timer to enforce the budget limit */
+            NODE_STATE(ksReprogram) = true;
+
+
+        } 
+        else if (NODE_STATE(ksCurSC)->budgetLimitSet) {
+            /* If a budget limit is in effect, we only permit donation over an endpoint with a threshold */
+            /* So disable canDonate since there is no threshold*/
+            setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
+            return performInvocation_Endpoint(
+                    EP_PTR(cap_endpoint_cap_get_capEPPtr(cap)),
+                    cap_endpoint_cap_get_capEPBadge(cap),
+                    cap_endpoint_cap_get_capCanGrant(cap),
+                    cap_endpoint_cap_get_capCanGrantReply(cap), block, call, false);
+        }
+
+
+#endif /* CONFIG_KERNEL_IPCTHRESHOLDS */
+
+
+        setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
         return performInvocation_Endpoint(
                    EP_PTR(cap_endpoint_cap_get_capEPPtr(cap)),
                    cap_endpoint_cap_get_capEPBadge(cap),
                    cap_endpoint_cap_get_capCanGrant(cap),
                    cap_endpoint_cap_get_capCanGrantReply(cap), block, call, canDonate);
 #else
+        setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
         return performInvocation_Endpoint(
                    EP_PTR(cap_endpoint_cap_get_capEPPtr(cap)),
                    cap_endpoint_cap_get_capEPBadge(cap),

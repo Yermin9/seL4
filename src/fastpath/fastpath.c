@@ -160,6 +160,26 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
     }
 #endif
 
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
+    ticks_t threshold = endpoint_ptr_get_epThreshold(ep_ptr);
+    if (threshold!=0) {
+        updateTimestamp();
+        ticks_t required_budget; 
+        /* Perform addition, checking for overflow as we go */
+        if (unlikely(getMaxTicksToUs() - NODE_STATE(ksConsumed) < threshold)) {
+            /* Overflow would occur */
+            /* Effectively impossible to pass the threshold, go to slowpath */
+            slowpath(SysCall);
+        } else {
+            required_budget = threshold + NODE_STATE(ksConsumed);
+        }
+
+        if (!available_budget_check(NODE_STATE(ksCurThread)->tcbSchedContext, required_budget)) {
+            slowpath(SysCall);
+        }
+    }
+#endif
+
 #ifdef ENABLE_SMP_SUPPORT
     /* Ensure both threads have the same affinity */
     if (unlikely(NODE_STATE(ksCurThread)->tcbAffinity != dest->tcbAffinity)) {
@@ -207,6 +227,18 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
     }
     reply->replyNext = call_stack_new(SC_REF(sc), true);
     sc->scReply = reply;
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    reply->budgetLimit=threshold;
+    if(threshold!=0 && !sc->budgetLimitSet) {
+        sc->budgetLimitSet=true;
+        sc->blconsumed=0;
+    }
+#endif
+
+
+
+
 #else
     /* Get sender reply slot */
     cte_t *replySlot = TCB_PTR_CTE_PTR(NODE_STATE(ksCurThread), tcbReply);
@@ -229,6 +261,14 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
     thread_state_ptr_set_tsType_np(&dest->tcbState,
                                    ThreadState_Running);
     switchToThread_fp(dest, cap_pd, stored_hw_asid);
+
+
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    if (threshold!=0) {
+        /* Need to reprogram the timer to account for the budgetLimit */
+        setNextInterrupt();
+    }
+#endif
 
     msgInfo = wordFromMessageInfo(seL4_MessageInfo_set_capsUnwrapped(info, 0));
 
@@ -493,9 +533,26 @@ void NORETURN fastpath_reply_recv(word_t cptr, word_t msgInfo)
         sc->scReply->replyNext = reply_ptr->replyNext;
     }
 
+
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)  
+    bool_t reprogram = false;
+    if (reply_ptr->budgetLimit!=0) {
+        if (prev_ptr == 0 || (prev_ptr != 0 && REPLY_PTR(prev_ptr)->budgetLimit==0)) {
+            /* Budget limts are no longer in effect for the SC */
+            sc->budgetLimitSet=false;
+        }
+        updateTimestamp();
+        reprogram=true;
+    }
+#endif
+
     /* TODO neccessary? */
     reply_ptr->replyPrev.words[0] = 0;
     reply_ptr->replyNext.words[0] = 0;
+
+
+
+
 #else
     /* Delete the reply cap. */
     mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged(
@@ -516,6 +573,13 @@ void NORETURN fastpath_reply_recv(word_t cptr, word_t msgInfo)
     thread_state_ptr_set_tsType_np(&caller->tcbState,
                                    ThreadState_Running);
     switchToThread_fp(caller, cap_pd, stored_hw_asid);
+    
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS
+    if (reprogram) {
+        /* Need to reprogram the timer to account for the budgetLimit */
+        setNextInterrupt();
+    }
+#endif
 
     msgInfo = wordFromMessageInfo(seL4_MessageInfo_set_capsUnwrapped(info, 0));
 

@@ -200,8 +200,12 @@ block sched_control_cap {
 
 ---- Arch-independent object types
 
--- Endpoint: size = 16 bytes
+-- Endpoint: size = 16 bytes (32 bytes on mcs with thresholds)
 block endpoint {
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
+    field epThreshold 64
+    padding 64
+#endif
     field epQueue_head 64
 
 #if BF_CANONICAL_RANGE == 48

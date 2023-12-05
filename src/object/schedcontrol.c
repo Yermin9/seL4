@@ -34,12 +34,13 @@ static exception_t invokeSchedControl_ConfigureFlags(sched_context_t *target, wo
         }
     }
 
+    target->scMaxBudget=budget;
     if (budget == period) {
         /* this is a cool hack: for round robin, we set the
          * period to 0, which means that the budget will always be ready to be refilled
          * and avoids some special casing.
          */
-        REFILL_NEW(target, MIN_REFILLS, budget, 0, core);
+        refill_new(target, MIN_REFILLS, budget, 0);
     } else if (SMP_COND_STATEMENT(core == target->scCore &&) target->scRefillMax > 0 && target->scTcb
                && isRunnable(target->scTcb)) {
         /* the scheduling context is active - it can be used, so
@@ -48,7 +49,7 @@ static exception_t invokeSchedControl_ConfigureFlags(sched_context_t *target, wo
     } else {
         /* the scheduling context isn't active - it's budget is not being used, so
          * we can just populate the parameters from now */
-        REFILL_NEW(target, max_refills, budget, period, core);
+        refill_new(target, max_refills, budget, period);
     }
 
 #ifdef ENABLE_SMP_SUPPORT
