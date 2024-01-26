@@ -585,6 +585,13 @@ void setNextInterrupt(void)
         next_interrupt = MIN(refill_head(NODE_STATE(ksReleaseHead)->tcbSchedContext)->rTime, next_interrupt);
     }
 
+#ifdef CONFIG_KERNEL_MCS
+    if (NODE_STATE(ksCurSC)->budgetLimitSet) {
+        assert(NODE_STATE(ksCurSC)->scReply!=NULL);
+        assert(NODE_STATE(ksCurSC)->scReply->budgetLimit > NODE_STATE(ksCurSC)->blconsumed + NODE_STATE(ksConsumed) + getKernelWcetTicks() );
+        next_interrupt = MIN(NODE_STATE(ksCurTime) + NODE_STATE(ksCurSC)->scReply->budgetLimit - NODE_STATE(ksCurSC)->blconsumed - NODE_STATE(ksConsumed) - getKernelWcetTicks(), next_interrupt);
+    }
+#endif
     setDeadline(next_interrupt - getTimerPrecision());
 }
 
@@ -601,6 +608,9 @@ void chargeBudget(ticks_t consumed, bool_t canTimeoutFault)
 
         assert(refill_head(NODE_STATE(ksCurSC))->rAmount >= MIN_BUDGET);
         NODE_STATE(ksCurSC)->scConsumed += consumed;
+        if (NODE_STATE(ksCurSC)->budgetLimitSet) {
+            NODE_STATE(ksCurSC)->blconsumed += consumed;
+        }
     }
     NODE_STATE(ksConsumed) = 0;
     if (likely(isSchedulable(NODE_STATE(ksCurThread)))) {
@@ -626,6 +636,8 @@ void endTimeslice(bool_t can_timeout_fault)
         postpone(NODE_STATE(ksCurSC));
     }
 }
+
+
 #else
 
 void timerTick(void)
@@ -673,6 +685,46 @@ void rescheduleRequired(void)
 }
 
 #ifdef CONFIG_KERNEL_MCS
+
+void budgetLimitExpired(void) {
+
+    reply_t *reply = NODE_STATE(ksCurSC)->scReply;
+    assert(reply!=NULL);
+
+    tcb_t *receiver = reply->replyTCB;
+
+    /* Do replyremove */
+    reply_remove(reply, receiver);
+
+    /* Return it an error */
+
+    /* Set the error type */
+    current_syscall_error.type = seL4_TimeoutError;
+    replyFromKernel_error(receiver);
+
+    /* Mark the target thread as running */
+    setThreadState(receiver, ThreadState_Running);
+
+    if (receiver->tcbSchedContext && isRunnable(receiver)) {
+        if ((refill_ready(receiver->tcbSchedContext) && refill_sufficient(receiver->tcbSchedContext, 0))) {
+            possibleSwitchTo(receiver);
+        } else {
+            postpone(receiver->tcbSchedContext);
+        }
+    }
+
+    /* Trigger the expired thread's timeout handler */
+    if (validTimeoutHandler(NODE_STATE(ksCurThread))) {
+        current_fault = seL4_Fault_Timeout_new(NODE_STATE(ksCurSC)->scBadge);
+        handleTimeout(NODE_STATE(ksCurThread));
+    }
+
+}
+
+#endif
+
+
+#ifdef CONFIG_KERNEL_MCS
 void awaken(void)
 {
     while (unlikely(NODE_STATE(ksReleaseHead) != NULL && refill_ready(NODE_STATE(ksReleaseHead)->tcbSchedContext))) {
@@ -691,3 +743,5 @@ void awaken(void)
     }
 }
 #endif
+
+

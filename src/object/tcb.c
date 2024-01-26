@@ -2073,6 +2073,8 @@ word_t setMRs_syscall_error(tcb_t *thread, word_t *receiveIPCBuffer)
 
     case seL4_IllegalOperation:
         return 0;
+    case seL4_TimeoutError:
+        return 0;
 
     case seL4_RangeError:
         setMR(thread, receiveIPCBuffer, 0,
