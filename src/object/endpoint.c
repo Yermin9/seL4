@@ -495,3 +495,25 @@ void reorderEP(endpoint_t *epptr, tcb_t *thread)
     ep_ptr_set_queue(epptr, queue);
 }
 #endif
+
+
+#ifdef CONFIG_KERNEL_MCS
+void setThreshold(endpoint_t * epptr, time_t threshold, bool_t budgetLimit) {
+    /* Add the kernel WCET to the passed threshold value, unless we were passed 0*/
+    if (threshold==0) {
+        /* Just set the value */
+        endpoint_ptr_set_epThreshold(epptr, 0);
+        endpoint_ptr_set_epBudgetLimit(epptr, 0);
+        return;
+    }
+    endpoint_ptr_set_epBudgetLimit(epptr, budgetLimit);
+    /* Check if we would overflow */
+    if (getMaxUsToTicks() <= threshold || (getMaxTicksToUs() - 2u * getKernelWcetTicks() < usToTicks(threshold))) {
+        /* Set the threshold to the maximum possible value */
+        endpoint_ptr_set_epThreshold(epptr, getMaxTicksToUs());
+        return;
+    }
+
+    endpoint_ptr_set_epThreshold(epptr, usToTicks(threshold) + 2u * getKernelWcetTicks());
+}
+#endif

@@ -31,6 +31,8 @@ void sendIPC(bool_t blocking, bool_t do_call, word_t badge,
              endpoint_t *epptr);
 void receiveIPC(tcb_t *thread, cap_t cap, bool_t isBlocking, cap_t replyCPtr);
 void reorderEP(endpoint_t *epptr, tcb_t *thread);
+
+void setThreshold(endpoint_t * epptr, time_t threshold, bool_t budgetLimit);
 #else
 void sendIPC(bool_t blocking, bool_t do_call, word_t badge,
              bool_t canGrant, bool_t canGrantReply, tcb_t *thread,
