@@ -192,6 +192,19 @@ seL4_NBSendRecv(seL4_CPtr dest, seL4_MessageInfo_t msgInfo, seL4_CPtr src, seL4_
 LIBSEL4_INLINE_FUNC seL4_MessageInfo_t
 seL4_NBSendWait(seL4_CPtr dest, seL4_MessageInfo_t msgInfo, seL4_CPtr src, seL4_Word *sender);
 
+
+
+/**
+ * @xmlonly <manual name="YieldUntilBudget" label="sel4_mcs_yield_until_budget"/> @endxmlonly
+ * @brief Causes replenishments to be merged until the head refill has at least 'budget' available.
+ *
+ * @xmlonly
+ * <docref>See <autoref label="sec:sys_yield_until_budget"/></docref>
+ * @endxmlonly
+ */
+LIBSEL4_INLINE_FUNC void
+seL4_YieldUntilBudget(seL4_Word budget);
+
 /**
  * @xmlonly <manual name="Yield" label="sel4_mcs_yield"/> @endxmlonly
  * @brief Yield the remaining timeslice. Periodic threads will not be scheduled again until their
@@ -202,7 +215,10 @@ seL4_NBSendWait(seL4_CPtr dest, seL4_MessageInfo_t msgInfo, seL4_CPtr src, seL4_
  * @endxmlonly
  */
 LIBSEL4_INLINE_FUNC void
-seL4_Yield(void);
+seL4_Yield(void) {
+    seL4_YieldUntilBudget(0);
+}
+
 
 /**
  * @xmlonly <manual name="Wait" label="sel4_mcs_wait"/> @endxmlonly

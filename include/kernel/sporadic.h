@@ -125,7 +125,7 @@ static inline bool_t refill_sufficient(sched_context_t *sc, ticks_t usage)
  */
 static inline bool_t refill_ready(sched_context_t *sc)
 {
-    return refill_head(sc)->rTime <= (NODE_STATE_ON_CORE(ksCurTime, sc->scCore) + getKernelWcetTicks());
+    return refill_head(sc)->rTime <= (NODE_STATE(ksCurTime) + getKernelWcetTicks());
 }
 
 /*
@@ -173,13 +173,7 @@ static inline bool_t sc_constant_bandwidth(sched_context_t *sc)
 }
 
 /* Create a new refill in a non-active sc */
-#ifdef ENABLE_SMP_SUPPORT
-void refill_new(sched_context_t *sc, word_t max_refills, ticks_t budget, ticks_t period, word_t core);
-#define REFILL_NEW(sc, max_refills, budget, period, core) refill_new(sc, max_refills, budget, period, core)
-#else
 void refill_new(sched_context_t *sc, word_t max_refills, ticks_t budget, ticks_t period);
-#define REFILL_NEW(sc, max_refills, budget, period, core) refill_new(sc, max_refills, budget, period)
-#endif
 
 /* Update refills in an active sc without violating bandwidth constraints */
 void refill_update(sched_context_t *sc, ticks_t new_period, ticks_t new_budget, word_t new_max_refills);
@@ -199,4 +193,28 @@ void refill_budget_check(ticks_t used);
  * refills that overlap.
  */
 void refill_unblock_check(sched_context_t *sc);
+
+
+/* 
+ * Defers and merges refills until the head refill exceeds the desired_budget
+ * Returns true upon success. Returns false if the max budget of the SC is less than the desired budget
+ */
+bool_t merge_until_budget(sched_context_t *sc, ticks_t desired_budget);
+
+/* This function does exactly the same thing as merge_until_budget, but is used in the Yield implementation.
+ * But not having a return value means that it speeds up the slowpath by 5% (At least on ARMv8a)
+ * Even on paths where it isn't ever called
+ */
+void merge_until_budget_void(sched_context_t *sc, ticks_t desired_budget);
+
+#if defined(CONFIG_KERNEL_IPCTHRESHOLDS) && defined(CONFIG_KERNEL_MCS)
+/* 
+ * This sums up the available budget in the SC.
+ * That is, the sum of budget in refills with a release time less than the current time.
+ * It then returns the bool value required_budget <= available_budget
+ * It does not alter the SC
+ */
+bool_t available_budget_check(sched_context_t *sc, ticks_t required_budget);
+
+#endif
 

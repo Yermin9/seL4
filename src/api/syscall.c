@@ -329,13 +329,21 @@ static exception_t handleInvocation(bool_t isCall, bool_t isBlocking)
         return EXCEPTION_NONE;
     }
 
+    /* The EXCEPTION_NONE_THRESHOLD_RESTART check is necessary, 
+     * because for IPC threshold behaviour, we actually do want to set ThreadState_Restart
+     */
     if (unlikely(
-            thread_state_get_tsType(thread->tcbState) == ThreadState_Restart)) {
+            thread_state_get_tsType(thread->tcbState) == ThreadState_Restart
+#ifdef CONFIG_KERNEL_IPCTHRESHOLDS 
+            && status != EXCEPTION_NONE_THRESHOLD_RESTART
+#endif
+            )) {
         if (isCall) {
             replyFromKernel_success_empty(thread);
         }
         setThreadState(thread, ThreadState_Running);
     }
+    
 
     return EXCEPTION_NONE;
 }
@@ -510,6 +518,67 @@ static void handleYield(void)
     rescheduleRequired();
 #endif
 }
+#ifdef CONFIG_KERNEL_MCS
+
+static void handleYieldUntilBudget(ticks_t desired_budget) {
+    if (likely(desired_budget==0)) {
+        handleYield();
+        return;
+    }
+    
+    // return;
+    if (refill_capacity(NODE_STATE(ksCurSC), NODE_STATE(ksConsumed)) >= desired_budget) {
+        /* SC already has desired budget in head refill. No further operation required */
+        return;
+    }
+    
+    /* Otherwise, we charge ksConsumed to the SC, then merge and defer */
+    /* The large codeblock below is just the internals of commitTime() */
+    // However, for some reason I don't fully understand, placing the direct code here, rather than calling commitTime()
+    // speeds up slowpath calls by 40 cycles or so, which is not insignificant.
+
+
+    if (likely(NODE_STATE(ksCurSC)->scRefillMax && (NODE_STATE(ksCurSC) != NODE_STATE(ksIdleSC)))) {
+        if (likely(NODE_STATE(ksConsumed) > 0)) {
+            /* if this function is called the head refil must be sufficient to
+             * charge ksConsumed */
+            assert(refill_sufficient(NODE_STATE(ksCurSC), NODE_STATE(ksConsumed)));
+            /* and it must be ready to use */
+            assert(refill_ready(NODE_STATE(ksCurSC)));
+
+            if (isRoundRobin(NODE_STATE(ksCurSC))) {
+                /* for round robin threads, there are only two refills: the HEAD, which is what
+                 * we are consuming, and the tail, which is what we have consumed */
+                assert(refill_size(NODE_STATE(ksCurSC)) == MIN_REFILLS);
+                refill_head(NODE_STATE(ksCurSC))->rAmount -= NODE_STATE(ksConsumed);
+                refill_tail(NODE_STATE(ksCurSC))->rAmount += NODE_STATE(ksConsumed);
+            } else {
+                refill_budget_check(NODE_STATE(ksConsumed));
+            }
+            assert(refill_sufficient(NODE_STATE(ksCurSC), 0));
+            assert(refill_ready(NODE_STATE(ksCurSC)));
+        }
+        NODE_STATE(ksCurSC)->scConsumed += NODE_STATE(ksConsumed);
+    }
+
+    NODE_STATE(ksConsumed) = 0llu;
+
+
+
+
+    merge_until_budget_void(NODE_STATE(ksCurSC), desired_budget);
+
+    /* It is possible that the head refill(which was insufficient), was overlapping with an unreleased refill
+     * When these are merged, the head refill becomes sufficient
+     */
+    if (!refill_ready(NODE_STATE(ksCurSC))) {
+        /* If not eligible to run, mark as needing to reschedule. */
+        postpone(NODE_STATE(ksCurThread)->tcbSchedContext);
+        rescheduleRequired();
+    }
+}
+#endif
+
 
 exception_t handleSyscall(syscall_t syscall)
 {
@@ -565,6 +634,10 @@ exception_t handleSyscall(syscall_t syscall)
             handleRecv(true, true);
             break;
 
+        case SysYield:
+            handleYield();
+            break;
+
 #else /* CONFIG_KERNEL_MCS */
         case SysWait:
             handleRecv(true, false);
@@ -609,13 +682,14 @@ exception_t handleSyscall(syscall_t syscall)
             }
             handleRecv(true, false);
             break;
+
+        case SysYieldUntilBudget:
+            handleYieldUntilBudget(getRegister(NODE_STATE(ksCurThread), capRegister));
+            break;
+
 #endif
         case SysNBRecv:
             handleRecv(false, true);
-            break;
-
-        case SysYield:
-            handleYield();
             break;
 
         default:
