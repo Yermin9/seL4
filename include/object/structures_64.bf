@@ -204,8 +204,7 @@ block sched_control_cap {
 block endpoint {
 #ifdef CONFIG_KERNEL_MCS
     field epThreshold 64
-    field epBudgetLimit 1
-    padding 63
+    padding 64
 #endif
     field epQueue_head 64
 
