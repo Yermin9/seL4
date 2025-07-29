@@ -198,3 +198,17 @@ void refill_budget_check(ticks_t used);
  */
 void refill_unblock_check(sched_context_t *sc);
 
+
+/*
+ * Defers and merges refills until the head refill exceeds the desired_budget
+ * Returns true upon success. Returns false if the max budget of the SC is less than the desired budget
+ */
+bool_t merge_until_budget(sched_context_t *sc, ticks_t desired_budget);
+
+/*
+ * This sums up the available budget in the SC.
+ * That is, the sum of budget in refills with a release time less than the current time.
+ * It then returns the bool value required_budget <= available_budget
+ * It does not alter the SC
+ */
+bool_t available_budget_check(sched_context_t *sc, ticks_t required_budget);
